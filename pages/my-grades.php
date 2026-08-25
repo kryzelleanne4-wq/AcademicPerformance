@@ -51,8 +51,8 @@ displayFlash();
 
 <div class="table-container">
     <div class="table-header">
-        <h2>📝 My Grades</h2>
-        <a href="?export=excel" class="btn btn-secondary btn-sm">⬇ Export to Excel</a>
+        <h2><?php echo icon('file-text', 24); ?> My Grades</h2>
+        <a href="?export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
     </div>
 
     <table>

@@ -177,10 +177,10 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>📝 Grades List</h2>
+            <h2><?php echo icon('pen-line', 24); ?> Grades List</h2>
             <div style="display: flex; gap: 8px;">
-                <a href="?export=excel" class="btn btn-secondary btn-sm">⬇ Export to Excel</a>
-                <button class="btn btn-primary" onclick="document.getElementById('addGradeModal').style.display='block'">+ Add Grade</button>
+                <a href="?export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
+                <button class="btn btn-primary" onclick="document.getElementById('addGradeModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Grade</button>
             </div>
         </div>
 

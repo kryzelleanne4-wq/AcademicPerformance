@@ -120,10 +120,10 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>🗓️ Class Schedules</h2>
+            <h2><?php echo icon('calendar', 24); ?> Class Schedules</h2>
             <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary" onclick="document.getElementById('addTermModal').style.display='block'">+ Add Term</button>
-                <button class="btn btn-primary" onclick="document.getElementById('addSectionModal').style.display='block'">+ Add Schedule</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('addTermModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Term</button>
+                <button class="btn btn-primary" onclick="document.getElementById('addSectionModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Schedule</button>
             </div>
         </div>
 

@@ -137,7 +137,7 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>✅ Record Attendance</h2>
+            <h2><?php echo icon('clipboard-check', 24); ?> Record Attendance</h2>
         </div>
         <div style="padding: 24px;">
             <form method="GET" class="form-row" style="align-items: flex-end;">
@@ -212,8 +212,8 @@ displayFlash();
     <?php if ($sectionId): ?>
     <div class="card" style="margin-top: 24px;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>📄 Attendance Records</h2>
-            <a href="?section_id=<?php echo $sectionId; ?>&export=excel" class="btn btn-secondary btn-sm">⬇ Export to Excel</a>
+            <h2><?php echo icon('file-text', 24); ?> Attendance Records</h2>
+            <a href="?section_id=<?php echo $sectionId; ?>&export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
         </div>
         <table>
             <thead>

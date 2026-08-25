@@ -63,8 +63,8 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>🏛️ Departments</h2>
-            <button class="btn btn-primary" onclick="document.getElementById('addDeptModal').style.display='block'">+ Add Department</button>
+            <h2><?php echo icon('landmark', 24); ?> Departments</h2>
+            <button class="btn btn-primary" onclick="document.getElementById('addDeptModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Department</button>
         </div>
 
         <table>

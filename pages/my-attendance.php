@@ -64,28 +64,28 @@ displayFlash();
 
 <div class="dashboard-stats" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
     <div class="stat-card">
-        <div class="stat-icon">📅</div>
+        <div class="stat-icon"><?php echo icon('calendar', 20); ?></div>
         <div class="stat-info">
             <h3><?php echo (int) ($summary['total'] ?? 0); ?></h3>
             <p>Total Records</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon">✅</div>
+        <div class="stat-icon"><?php echo icon('check-circle', 20); ?></div>
         <div class="stat-info">
             <h3><?php echo (int) ($summary['present'] ?? 0); ?></h3>
             <p>Present</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon">⏰</div>
+        <div class="stat-icon"><?php echo icon('clock', 20); ?></div>
         <div class="stat-info">
             <h3><?php echo (int) ($summary['late'] ?? 0); ?></h3>
             <p>Late</p>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-icon">❌</div>
+        <div class="stat-icon"><?php echo icon('x-circle', 20); ?></div>
         <div class="stat-info">
             <h3><?php echo (int) ($summary['absent'] ?? 0); ?></h3>
             <p>Absent</p>
@@ -95,8 +95,8 @@ displayFlash();
 
 <div class="table-container">
     <div class="table-header">
-        <h2>✅ My Attendance</h2>
-        <a href="?export=excel" class="btn btn-secondary btn-sm">⬇ Export to Excel</a>
+        <h2><?php echo icon('calendar-check', 24); ?> My Attendance</h2>
+        <a href="?export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
     </div>
 
     <table>

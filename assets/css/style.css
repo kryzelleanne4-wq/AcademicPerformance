@@ -472,6 +472,22 @@ a {
     line-height: 32px;
 }
 
+/* Inline SVG icons inside headings and buttons */
+.card-header h2 svg,
+.table-header h2 svg,
+.subjects-header h2 svg {
+    margin-right: 8px;
+    vertical-align: -5px;
+}
+
+.btn svg {
+    vertical-align: -2px;
+}
+
+.menu-item .icon svg {
+    display: block;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;

@@ -51,7 +51,7 @@ displayFlash();
 
 <div class="table-container">
     <div class="table-header">
-        <h2>📈 Performance Overview</h2>
+        <h2><?php echo icon('trending-up', 24); ?> Performance Overview</h2>
     </div>
     
     <table>

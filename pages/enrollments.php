@@ -78,8 +78,8 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>📋 Enroll Students</h2>
-            <button class="btn btn-primary" onclick="document.getElementById('enrollModal').style.display='block'">+ Enroll Students</button>
+            <h2><?php echo icon('clipboard-list', 24); ?> Enroll Students</h2>
+            <button class="btn btn-primary" onclick="document.getElementById('enrollModal').style.display='block'"><?php echo icon('plus', 14); ?> Enroll Students</button>
         </div>
 
         <table>

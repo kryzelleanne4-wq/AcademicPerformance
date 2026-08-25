@@ -16,23 +16,23 @@ $role = $user['role'];
 $stats = [];
 if ($role === 'admin') {
     $stats = [
-        ['👤', querySingle("SELECT COUNT(*) FROM students"), 'Total Students'],
-        ['🧑‍🏫', querySingle("SELECT COUNT(*) FROM instructors"), 'Total Instructors'],
-        ['📚', querySingle("SELECT COUNT(*) FROM subjects WHERE is_active = 1"), 'Active Subjects'],
-        ['📋', querySingle("SELECT COUNT(*) FROM enrollments WHERE status = 'Enrolled'"), 'Active Enrollments']
+        ['user', querySingle("SELECT COUNT(*) FROM students"), 'Total Students'],
+        ['users', querySingle("SELECT COUNT(*) FROM instructors"), 'Total Instructors'],
+        ['book-open', querySingle("SELECT COUNT(*) FROM subjects WHERE is_active = 1"), 'Active Subjects'],
+        ['clipboard-list', querySingle("SELECT COUNT(*) FROM enrollments WHERE status = 'Enrolled'"), 'Active Enrollments']
     ];
 } elseif ($role === 'instructor') {
     $instructor = currentInstructor();
     $stats = [
-        ['🗓️', querySingle("SELECT COUNT(*) FROM course_sections WHERE instructor_id = " . (int) $instructor['id']), 'My Sections'],
-        ['👥', querySingle("
+        ['calendar', querySingle("SELECT COUNT(*) FROM course_sections WHERE instructor_id = " . (int) $instructor['id']), 'My Sections'],
+        ['users', querySingle("
             SELECT COUNT(DISTINCT e.student_id)
             FROM enrollments e
             JOIN course_sections cs ON e.section_id = cs.id
             WHERE cs.instructor_id = " . (int) $instructor['id'] . " AND e.status = 'Enrolled'
         "), 'My Students'],
-        ['✏️', querySingle("SELECT COUNT(*) FROM grades WHERE instructor_id = " . (int) $instructor['id']), 'Grades Recorded'],
-        ['✅', querySingle("
+        ['pen-line', querySingle("SELECT COUNT(*) FROM grades WHERE instructor_id = " . (int) $instructor['id']), 'Grades Recorded'],
+        ['check-circle', querySingle("
             SELECT COUNT(*)
             FROM attendance a
             JOIN course_sections cs ON a.section_id = cs.id
@@ -42,14 +42,14 @@ if ($role === 'admin') {
 } else {
     $student = currentStudent();
     $stats = [
-        ['📚', querySingle("
+        ['book-open', querySingle("
             SELECT COUNT(*) FROM enrollments WHERE student_id = " . (int) $student['id'] . " AND status = 'Enrolled'
         "), 'My Subjects'],
-        ['📝', querySingle("SELECT COUNT(*) FROM grades WHERE student_id = " . (int) $student['id']), 'Grades Recorded'],
-        ['🎯', querySingle("
+        ['file-text', querySingle("SELECT COUNT(*) FROM grades WHERE student_id = " . (int) $student['id']), 'Grades Recorded'],
+        ['award', querySingle("
             SELECT ROUND(AVG(score), 2) FROM grades WHERE student_id = " . (int) $student['id']
         ) ?: '—', 'Average Score'],
-        ['✅', querySingle("
+        ['check-circle', querySingle("
             SELECT COUNT(*) FROM attendance WHERE student_id = " . (int) $student['id'] . " AND status = 'Present'
         "), 'Days Present']
     ];
@@ -65,22 +65,13 @@ $iconClass = "
         ELSE 'science'
     END
 ";
-$iconEmoji = "
-    CASE
-        WHEN s.subject_code LIKE 'MATH%' THEN '📐'
-        WHEN s.subject_code LIKE 'ENG%' THEN '📖'
-        WHEN s.subject_code LIKE 'BIO%' THEN '🧬'
-        WHEN s.subject_code LIKE 'CS%' OR s.subject_code LIKE 'PROG%' THEN '💻'
-        ELSE '🔬'
-    END
-";
 
 $subjects = [];
 if ($role === 'student') {
     $stmt = $db->prepare("
         SELECT s.subject_name, s.subject_code, cs.section_code, cs.schedule,
                ins.first_name, ins.last_name,
-               $iconClass AS icon_class, $iconEmoji AS icon_emoji, s.id
+               $iconClass AS icon_class, s.id
         FROM enrollments e
         JOIN course_sections cs ON e.section_id = cs.id
         JOIN subjects s ON cs.subject_id = s.id
@@ -95,7 +86,7 @@ if ($role === 'student') {
     $stmt = $db->prepare("
         SELECT s.subject_name, s.subject_code, cs.section_code, cs.schedule,
                ins.first_name, ins.last_name,
-               $iconClass AS icon_class, $iconEmoji AS icon_emoji, s.id
+               $iconClass AS icon_class, s.id
         FROM course_sections cs
         JOIN subjects s ON cs.subject_id = s.id
         JOIN instructors ins ON cs.instructor_id = ins.id
@@ -108,7 +99,7 @@ if ($role === 'student') {
     $subjects = $db->query("
         SELECT s.subject_name, s.subject_code, NULL AS section_code, NULL AS schedule,
                NULL AS first_name, NULL AS last_name,
-               $iconClass AS icon_class, $iconEmoji AS icon_emoji, s.id
+               $iconClass AS icon_class, s.id
         FROM subjects s WHERE s.is_active = 1
         ORDER BY s.subject_name
     ")->fetchAll();
@@ -122,7 +113,7 @@ displayFlash();
 <div class="dashboard-stats">
     <?php foreach ($stats as $stat): ?>
     <div class="stat-card">
-        <div class="stat-icon"><?php echo $stat[0]; ?></div>
+        <div class="stat-icon"><?php echo icon($stat[0], 20); ?></div>
         <div class="stat-info">
             <h3><?php echo $stat[1]; ?></h3>
             <p><?php echo $stat[2]; ?></p>
@@ -144,7 +135,7 @@ displayFlash();
     <?php foreach ($subjects as $subject): ?>
     <div class="subject-card">
         <div class="subject-card-icon <?php echo $subject['icon_class']; ?>">
-            <?php echo $subject['icon_emoji']; ?>
+            <?php echo icon(subjectIcon($subject['icon_class']), 40); ?>
         </div>
         <div class="subject-card-body">
             <h3 class="subject-card-title"><?php echo htmlspecialchars($subject['subject_name']); ?></h3>

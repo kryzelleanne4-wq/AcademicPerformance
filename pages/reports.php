@@ -40,7 +40,7 @@ include '../includes/header.php';
 <main>
         <div class="card">
             <div class="card-header">
-                <h2>📊 Student Performance Summary</h2>
+                <h2><?php echo icon('bar-chart', 24); ?> Student Performance Summary</h2>
             </div>
             
             <table>

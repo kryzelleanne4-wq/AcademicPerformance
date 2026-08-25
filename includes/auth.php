@@ -62,7 +62,7 @@ function requireRole(...$roles) {
             . '<title>Access Denied</title>'
             . '<link rel="stylesheet" href="' . $dir . 'assets/css/style.css"></head><body>'
             . '<div style="max-width:480px;margin:120px auto;padding:32px;border:1px solid var(--outline-soft);border-radius:8px;background:var(--surface-white);text-align:center;">'
-            . '<div style="font-size:48px;">🚫</div>'
+            . '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ba1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
             . '<h1 style="margin:16px 0 8px;color:var(--ink);">Access Denied</h1>'
             . '<p style="color:var(--ink-muted);margin-bottom:24px;">You do not have permission to view this page.</p>'
             . '<a class="btn btn-primary" href="' . $dir . 'index.php">Back to Dashboard</a>'

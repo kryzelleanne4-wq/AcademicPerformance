@@ -139,8 +139,8 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>👥 Manage Users</h2>
-            <button class="btn btn-primary" onclick="document.getElementById('addUserModal').style.display='block'">+ Add User</button>
+            <h2><?php echo icon('users', 24); ?> Manage Users</h2>
+            <button class="btn btn-primary" onclick="document.getElementById('addUserModal').style.display='block'"><?php echo icon('plus', 14); ?> Add User</button>
         </div>
 
         <table>

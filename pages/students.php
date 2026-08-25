@@ -109,8 +109,8 @@ include '../includes/header.php';
         
         <div class="card">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>👤 Students List</h2>
-                <button class="btn btn-primary" onclick="document.getElementById('addStudentModal').style.display='block'">+ Add Student</button>
+                <h2><?php echo icon('user', 24); ?> Students List</h2>
+                <button class="btn btn-primary" onclick="document.getElementById('addStudentModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Student</button>
             </div>
             
             <?php if ($message): ?>

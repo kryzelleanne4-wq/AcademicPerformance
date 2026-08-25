@@ -22,15 +22,6 @@ $iconClass = "
         ELSE 'science'
     END
 ";
-$iconEmoji = "
-    CASE
-        WHEN s.subject_code LIKE 'MATH%' THEN '📐'
-        WHEN s.subject_code LIKE 'ENG%' THEN '📖'
-        WHEN s.subject_code LIKE 'BIO%' THEN '🧬'
-        WHEN s.subject_code LIKE 'CS%' OR s.subject_code LIKE 'PROG%' THEN '💻'
-        ELSE '🔬'
-    END
-";
 
 $subjects = [];
 
@@ -38,7 +29,7 @@ if ($user['role'] === 'student') {
     $student = currentStudent();
     $stmt = $db->prepare("
         SELECT s.id, s.subject_code, s.subject_name,
-               $iconClass AS icon_class, $iconEmoji AS icon_emoji,
+               $iconClass AS icon_class,
                cs.section_code, cs.schedule,
                ins.first_name, ins.last_name
         FROM enrollments e
@@ -54,7 +45,7 @@ if ($user['role'] === 'student') {
     $instructor = currentInstructor();
     $stmt = $db->prepare("
         SELECT s.id, s.subject_code, s.subject_name,
-               $iconClass AS icon_class, $iconEmoji AS icon_emoji,
+               $iconClass AS icon_class,
                cs.section_code, cs.schedule,
                ins.first_name, ins.last_name
         FROM course_sections cs
@@ -68,7 +59,7 @@ if ($user['role'] === 'student') {
 } else {
     $stmt = $db->query("
         SELECT s.id, s.subject_code, s.subject_name,
-               $iconClass AS icon_class, $iconEmoji AS icon_emoji,
+               $iconClass AS icon_class,
                NULL AS section_code, NULL AS schedule,
                NULL AS first_name, NULL AS last_name
         FROM subjects s
@@ -82,7 +73,7 @@ displayFlash();
 ?>
 
 <div class="subjects-header">
-    <h2>📚 <?php echo $user['role'] === 'admin' ? 'Course Catalog' : 'My Subjects'; ?></h2>
+    <h2><?php echo icon('book-open', 24); ?> <?php echo $user['role'] === 'admin' ? 'Course Catalog' : 'My Subjects'; ?></h2>
 </div>
 
 <div class="subjects-grid">
@@ -93,7 +84,7 @@ displayFlash();
     <?php foreach ($subjects as $subject): ?>
     <div class="subject-card">
         <div class="subject-card-icon <?php echo $subject['icon_class']; ?>">
-            <?php echo $subject['icon_emoji']; ?>
+            <?php echo icon(subjectIcon($subject['icon_class']), 40); ?>
         </div>
         <div class="subject-card-body">
             <h3 class="subject-card-title"><?php echo htmlspecialchars($subject['subject_name']); ?></h3>

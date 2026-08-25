@@ -42,7 +42,7 @@ include '../includes/header.php';
 <main>
     <div class="card" style="max-width: 520px;">
         <div class="card-header">
-            <h2>🔒 Change Password</h2>
+            <h2><?php echo icon('lock', 24); ?> Change Password</h2>
         </div>
         <div style="padding: 24px;">
             <?php if ($error): ?>

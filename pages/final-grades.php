@@ -54,7 +54,7 @@ displayFlash();
 
 <div class="table-container">
     <div class="table-header">
-        <h2>🏆 Final Grades</h2>
+        <h2><?php echo icon('trophy', 24); ?> Final Grades</h2>
     </div>
     
     <table>

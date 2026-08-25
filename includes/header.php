@@ -38,82 +38,82 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
         <nav class="sidebar-menu">
             <div class="menu-category">Main Menu</div>
             <a href="<?php echo $assetPrefix; ?>index.php" class="menu-item <?php echo $currentPage === 'index' ? 'active' : ''; ?>">
-                <span class="icon">📊</span>
+                <span class="icon"><?php echo icon('dashboard'); ?></span>
                 Dashboard
             </a>
 
             <?php if ($role === 'admin'): ?>
                 <div class="menu-category">Administration</div>
                 <a href="<?php echo $assetPrefix; ?>pages/users.php" class="menu-item <?php echo $currentPage === 'users' ? 'active' : ''; ?>">
-                    <span class="icon">👥</span>
+                    <span class="icon"><?php echo icon('users'); ?></span>
                     Users
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/students.php" class="menu-item <?php echo $currentPage === 'students' ? 'active' : ''; ?>">
-                    <span class="icon">👤</span>
+                    <span class="icon"><?php echo icon('user'); ?></span>
                     Students
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/departments.php" class="menu-item <?php echo $currentPage === 'departments' ? 'active' : ''; ?>">
-                    <span class="icon">🏛️</span>
+                    <span class="icon"><?php echo icon('landmark'); ?></span>
                     Departments
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/manage-subjects.php" class="menu-item <?php echo $currentPage === 'manage-subjects' ? 'active' : ''; ?>">
-                    <span class="icon">📚</span>
+                    <span class="icon"><?php echo icon('book-open'); ?></span>
                     Courses / Subjects
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/schedules.php" class="menu-item <?php echo $currentPage === 'schedules' ? 'active' : ''; ?>">
-                    <span class="icon">🗓️</span>
+                    <span class="icon"><?php echo icon('calendar'); ?></span>
                     Schedules
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/enrollments.php" class="menu-item <?php echo $currentPage === 'enrollments' ? 'active' : ''; ?>">
-                    <span class="icon">📋</span>
+                    <span class="icon"><?php echo icon('clipboard-list'); ?></span>
                     Enrollments
                 </a>
 
                 <div class="menu-category">Academic Records</div>
                 <a href="<?php echo $assetPrefix; ?>pages/attendance.php" class="menu-item <?php echo $currentPage === 'attendance' ? 'active' : ''; ?>">
-                    <span class="icon">✅</span>
+                    <span class="icon"><?php echo icon('clipboard-check'); ?></span>
                     Attendance
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/grades.php" class="menu-item <?php echo $currentPage === 'grades' ? 'active' : ''; ?>">
-                    <span class="icon">✏️</span>
+                    <span class="icon"><?php echo icon('pen-line'); ?></span>
                     Grades
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/reports.php" class="menu-item <?php echo $currentPage === 'reports' ? 'active' : ''; ?>">
-                    <span class="icon">📈</span>
+                    <span class="icon"><?php echo icon('bar-chart'); ?></span>
                     Reports
                 </a>
 
             <?php elseif ($role === 'instructor'): ?>
                 <div class="menu-category">Teaching</div>
                 <a href="<?php echo $assetPrefix; ?>pages/subjects.php" class="menu-item <?php echo $currentPage === 'subjects' ? 'active' : ''; ?>">
-                    <span class="icon">📚</span>
+                    <span class="icon"><?php echo icon('book-open'); ?></span>
                     My Subjects
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/attendance.php" class="menu-item <?php echo $currentPage === 'attendance' ? 'active' : ''; ?>">
-                    <span class="icon">✅</span>
+                    <span class="icon"><?php echo icon('clipboard-check'); ?></span>
                     Attendance
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/grades.php" class="menu-item <?php echo $currentPage === 'grades' ? 'active' : ''; ?>">
-                    <span class="icon">✏️</span>
+                    <span class="icon"><?php echo icon('pen-line'); ?></span>
                     Grades
                 </a>
 
             <?php else: ?>
                 <div class="menu-category">My Records</div>
                 <a href="<?php echo $assetPrefix; ?>pages/my-grades.php" class="menu-item <?php echo $currentPage === 'my-grades' ? 'active' : ''; ?>">
-                    <span class="icon">📝</span>
+                    <span class="icon"><?php echo icon('file-text'); ?></span>
                     My Grades
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/subjects.php" class="menu-item <?php echo $currentPage === 'subjects' ? 'active' : ''; ?>">
-                    <span class="icon">📚</span>
+                    <span class="icon"><?php echo icon('book-open'); ?></span>
                     My Subjects
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/my-attendance.php" class="menu-item <?php echo $currentPage === 'my-attendance' ? 'active' : ''; ?>">
-                    <span class="icon">✅</span>
+                    <span class="icon"><?php echo icon('calendar-check'); ?></span>
                     My Attendance
                 </a>
                 <a href="<?php echo $assetPrefix; ?>pages/final-grades.php" class="menu-item <?php echo $currentPage === 'final-grades' ? 'active' : ''; ?>">
-                    <span class="icon">🏆</span>
+                    <span class="icon"><?php echo icon('trophy'); ?></span>
                     My Final Grades
                 </a>
             <?php endif; ?>
@@ -124,7 +124,7 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
     <div class="main-content">
         <!-- Top Header -->
         <header class="top-header">
-            <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+            <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
             <h1 class="page-title"><?php echo $pageTitle ?? 'Dashboard'; ?></h1>
             <div class="user-info">
                 <div class="user-meta">
@@ -132,8 +132,8 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
                     <span class="user-role"><?php echo $roleLabel; ?></span>
                 </div>
                 <div class="user-avatar"><?php echo $avatarLetter; ?></div>
-                <a href="<?php echo $assetPrefix; ?>pages/change-password.php" class="btn btn-secondary btn-sm">Change Password</a>
-                <a href="<?php echo $assetPrefix; ?>logout.php" class="btn btn-danger btn-sm">Logout</a>
+                <a href="<?php echo $assetPrefix; ?>pages/change-password.php" class="btn btn-secondary btn-sm"><?php echo icon('key', 14); ?> Change Password</a>
+                <a href="<?php echo $assetPrefix; ?>logout.php" class="btn btn-danger btn-sm"><?php echo icon('log-out', 14); ?> Logout</a>
             </div>
         </header>
 

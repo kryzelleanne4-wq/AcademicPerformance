@@ -64,7 +64,7 @@ displayFlash();
 
 <div class="table-container">
     <div class="table-header">
-        <h2>📊 Grades for <?php echo htmlspecialchars($subject['subject_name']); ?></h2>
+        <h2><?php echo icon('bar-chart', 24); ?> Grades for <?php echo htmlspecialchars($subject['subject_name']); ?></h2>
         <a href="subjects.php" class="btn btn-secondary">← Back to Subjects</a>
     </div>
 
