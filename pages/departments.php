@@ -81,12 +81,12 @@ displayFlash();
             <tbody>
                 <?php foreach ($departments as $department): ?>
                 <tr>
-                    <td><code><?php echo htmlspecialchars($department['department_code']); ?></code></td>
-                    <td><?php echo htmlspecialchars($department['department_name']); ?></td>
-                    <td><?php echo htmlspecialchars($department['description'] ?? ''); ?></td>
-                    <td><?php echo $department['instructor_count']; ?></td>
-                    <td><?php echo $department['subject_count']; ?></td>
-                    <td>
+                    <td data-label="Code"><code><?php echo htmlspecialchars($department['department_code']); ?></code></td>
+                    <td data-label="Name"><?php echo htmlspecialchars($department['department_name']); ?></td>
+                    <td data-label="Description"><?php echo htmlspecialchars($department['description'] ?? ''); ?></td>
+                    <td data-label="Instructors"><?php echo $department['instructor_count']; ?></td>
+                    <td data-label="Subjects"><?php echo $department['subject_count']; ?></td>
+                    <td data-label="Actions">
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this department?')">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="id" value="<?php echo $department['id']; ?>">

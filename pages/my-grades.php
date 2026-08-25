@@ -71,13 +71,13 @@ displayFlash();
         <tbody>
             <?php foreach ($grades as $grade): ?>
             <tr>
-                <td><?php echo htmlspecialchars($grade['subject_code']); ?></td>
-                <td><?php echo htmlspecialchars($grade['subject_name']); ?></td>
-                <td><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
-                <td><?php echo htmlspecialchars($grade['semester']); ?></td>
-                <td><?php echo $grade['year']; ?></td>
-                <td><?php echo $grade['score']; ?></td>
-                <td>
+                <td data-label="Subject Code"><?php echo htmlspecialchars($grade['subject_code']); ?></td>
+                <td data-label="Subject Name"><?php echo htmlspecialchars($grade['subject_name']); ?></td>
+                <td data-label="Section"><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
+                <td data-label="Semester"><?php echo htmlspecialchars($grade['semester']); ?></td>
+                <td data-label="Year"><?php echo $grade['year']; ?></td>
+                <td data-label="Score"><?php echo $grade['score']; ?></td>
+                <td data-label="Grade">
                     <?php
                     $gradeClass = 'grade-' . strtolower($grade['grade']);
                     ?>
@@ -85,7 +85,7 @@ displayFlash();
                         <?php echo $grade['grade']; ?>
                     </span>
                 </td>
-                <td><?php echo $grade['credits']; ?></td>
+                <td data-label="Credits"><?php echo $grade['credits']; ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

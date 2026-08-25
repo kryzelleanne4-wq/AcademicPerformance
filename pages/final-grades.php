@@ -71,12 +71,12 @@ displayFlash();
         <tbody>
             <?php foreach ($finalGrades as $row): ?>
             <tr>
-                <td><?php echo $row['student_number']; ?></td>
-                <td><?php echo $row['first_name'] . ' ' . $row['last_name']; ?></td>
-                <td><?php echo $row['total_subjects']; ?></td>
-                <td><?php echo $row['total_credits']; ?></td>
-                <td><?php echo $row['final_average']; ?></td>
-                <td>
+                <td data-label="Student ID"><?php echo $row['student_number']; ?></td>
+                <td data-label="Name"><?php echo $row['first_name'] . ' ' . $row['last_name']; ?></td>
+                <td data-label="Subjects"><?php echo $row['total_subjects']; ?></td>
+                <td data-label="Credits"><?php echo $row['total_credits']; ?></td>
+                <td data-label="Final Average"><?php echo $row['final_average']; ?></td>
+                <td data-label="Final Grade">
                     <?php $gradeClass = 'grade-' . strtolower($row['final_grade']); ?>
                     <span class="grade-badge <?php echo $gradeClass; ?>">
                         <?php echo $row['final_grade']; ?>

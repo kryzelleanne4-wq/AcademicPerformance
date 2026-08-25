@@ -132,17 +132,17 @@ include '../includes/header.php';
                 <tbody>
                     <?php foreach ($students as $student): ?>
                     <tr>
-                        <td><code><?php echo htmlspecialchars($student['student_id']); ?></code></td>
-                        <td><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
-                        <td><?php echo htmlspecialchars($student['email'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($student['phone'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($student['gender'] ?? ''); ?></td>
-                        <td>
+                        <td data-label="Student ID"><code><?php echo htmlspecialchars($student['student_id']); ?></code></td>
+                        <td data-label="Name"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
+                        <td data-label="Email"><?php echo htmlspecialchars($student['email'] ?? ''); ?></td>
+                        <td data-label="Phone"><?php echo htmlspecialchars($student['phone'] ?? ''); ?></td>
+                        <td data-label="Gender"><?php echo htmlspecialchars($student['gender'] ?? ''); ?></td>
+                        <td data-label="Status">
                             <span class="attendance-badge status-<?php echo $student['status'] === 'Active' ? 'present' : 'absent'; ?>">
                                 <?php echo htmlspecialchars($student['status']); ?>
                             </span>
                         </td>
-                        <td>
+                        <td data-label="Actions">
                             <form method="POST" style="display: inline;">
                                 <input type="hidden" name="action" value="toggle_status">
                                 <input type="hidden" name="id" value="<?php echo $student['id']; ?>">

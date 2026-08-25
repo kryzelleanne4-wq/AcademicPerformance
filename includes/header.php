@@ -127,13 +127,25 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
             <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
             <h1 class="page-title"><?php echo $pageTitle ?? 'Dashboard'; ?></h1>
             <div class="user-info">
-                <div class="user-meta">
-                    <span class="user-name"><?php echo htmlspecialchars($fullName); ?></span>
-                    <span class="user-role"><?php echo $roleLabel; ?></span>
+                <div class="user-menu">
+                    <button class="user-menu-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+                        <div class="user-meta">
+                            <span class="user-name"><?php echo htmlspecialchars($fullName); ?></span>
+                            <span class="user-role"><?php echo $roleLabel; ?></span>
+                        </div>
+                        <div class="user-avatar"><?php echo $avatarLetter; ?></div>
+                        <?php echo icon('chevron-down', 14); ?>
+                    </button>
+                    <div class="user-dropdown">
+                        <div class="dropdown-header">
+                            <span class="dropdown-name"><?php echo htmlspecialchars($fullName); ?></span>
+                            <span class="dropdown-id"><?php echo htmlspecialchars($user['username']); ?></span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="<?php echo $assetPrefix; ?>pages/change-password.php"><?php echo icon('key', 16); ?> Change Password</a>
+                        <a href="<?php echo $assetPrefix; ?>logout.php"><?php echo icon('log-out', 16); ?> Logout</a>
+                    </div>
                 </div>
-                <div class="user-avatar"><?php echo $avatarLetter; ?></div>
-                <a href="<?php echo $assetPrefix; ?>pages/change-password.php" class="btn btn-secondary btn-sm"><?php echo icon('key', 14); ?> Change Password</a>
-                <a href="<?php echo $assetPrefix; ?>logout.php" class="btn btn-danger btn-sm"><?php echo icon('log-out', 14); ?> Logout</a>
             </div>
         </header>
 

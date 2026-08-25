@@ -56,11 +56,11 @@ include '../includes/header.php';
                 <tbody>
                     <?php foreach ($studentGrades as $row): ?>
                     <tr>
-                        <td><?php echo $row['student_id']; ?></td>
-                        <td><?php echo $row['first_name'] . ' ' . $row['last_name']; ?></td>
-                        <td><?php echo $row['total_subjects']; ?></td>
-                        <td><?php echo $row['average_score'] ?? 'N/A'; ?></td>
-                        <td>
+                        <td data-label="Student ID"><?php echo $row['student_id']; ?></td>
+                        <td data-label="Name"><?php echo $row['first_name'] . ' ' . $row['last_name']; ?></td>
+                        <td data-label="Subjects Taken"><?php echo $row['total_subjects']; ?></td>
+                        <td data-label="Average Score"><?php echo $row['average_score'] ?? 'N/A'; ?></td>
+                        <td data-label="Grade">
                             <?php if ($row['average_grade']): ?>
                             <span class="grade-badge grade-<?php echo strtolower($row['average_grade']); ?>">
                                 <?php echo $row['average_grade']; ?>

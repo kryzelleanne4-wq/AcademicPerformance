@@ -94,17 +94,17 @@ displayFlash();
             <tbody>
                 <?php foreach ($subjects as $subject): ?>
                 <tr>
-                    <td><code><?php echo htmlspecialchars($subject['subject_code']); ?></code></td>
-                    <td><?php echo htmlspecialchars($subject['subject_name']); ?></td>
-                    <td><?php echo htmlspecialchars($subject['department_name'] ?? '—'); ?></td>
-                    <td><?php echo $subject['credits']; ?></td>
-                    <td><?php echo $subject['course_level'] ? 'Year ' . $subject['course_level'] : '—'; ?></td>
-                    <td>
+                    <td data-label="Code"><code><?php echo htmlspecialchars($subject['subject_code']); ?></code></td>
+                    <td data-label="Name"><?php echo htmlspecialchars($subject['subject_name']); ?></td>
+                    <td data-label="Department"><?php echo htmlspecialchars($subject['department_name'] ?? '—'); ?></td>
+                    <td data-label="Credits"><?php echo $subject['credits']; ?></td>
+                    <td data-label="Level"><?php echo $subject['course_level'] ? 'Year ' . $subject['course_level'] : '—'; ?></td>
+                    <td data-label="Status">
                         <span class="attendance-badge status-<?php echo $subject['is_active'] ? 'present' : 'absent'; ?>">
                             <?php echo $subject['is_active'] ? 'Active' : 'Inactive'; ?>
                         </span>
                     </td>
-                    <td>
+                    <td data-label="Actions">
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this subject?')">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="id" value="<?php echo $subject['id']; ?>">

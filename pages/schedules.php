@@ -144,15 +144,15 @@ displayFlash();
             <tbody>
                 <?php foreach ($sections as $section): ?>
                 <tr>
-                    <td><code><?php echo htmlspecialchars($section['section_code']); ?></code></td>
-                    <td><?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name']); ?></td>
-                    <td><?php echo htmlspecialchars($section['first_name'] . ' ' . $section['last_name']); ?></td>
-                    <td><?php echo htmlspecialchars($section['term_name'] . ' ' . $section['academic_year']); ?></td>
-                    <td><?php echo htmlspecialchars($section['schedule'] ?? '—'); ?></td>
-                    <td><?php echo htmlspecialchars($section['room'] ?? '—'); ?></td>
-                    <td><?php echo $section['capacity'] ?: '—'; ?></td>
-                    <td><?php echo $section['enrolled_count']; ?></td>
-                    <td>
+                    <td data-label="Section"><code><?php echo htmlspecialchars($section['section_code']); ?></code></td>
+                    <td data-label="Subject"><?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name']); ?></td>
+                    <td data-label="Instructor"><?php echo htmlspecialchars($section['first_name'] . ' ' . $section['last_name']); ?></td>
+                    <td data-label="Term"><?php echo htmlspecialchars($section['term_name'] . ' ' . $section['academic_year']); ?></td>
+                    <td data-label="Schedule"><?php echo htmlspecialchars($section['schedule'] ?? '—'); ?></td>
+                    <td data-label="Room"><?php echo htmlspecialchars($section['room'] ?? '—'); ?></td>
+                    <td data-label="Capacity"><?php echo $section['capacity'] ?: '—'; ?></td>
+                    <td data-label="Enrolled"><?php echo $section['enrolled_count']; ?></td>
+                    <td data-label="Actions">
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this schedule?')">
                             <input type="hidden" name="action" value="delete_section">
                             <input type="hidden" name="id" value="<?php echo $section['id']; ?>">

@@ -179,9 +179,9 @@ displayFlash();
                     <tbody>
                         <?php foreach ($roster as $student): ?>
                         <tr>
-                            <td><code><?php echo htmlspecialchars($student['student_id']); ?></code></td>
-                            <td><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
-                            <td>
+                            <td data-label="Student ID"><code><?php echo htmlspecialchars($student['student_id']); ?></code></td>
+                            <td data-label="Name"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
+                            <td data-label="Status">
                                 <select name="status[<?php echo $student['id']; ?>]" class="form-control">
                                     <?php foreach (['Present', 'Absent', 'Late', 'Excused'] as $status): ?>
                                     <option value="<?php echo $status; ?>" <?php echo ($student['status'] ?? 'Present') === $status ? 'selected' : ''; ?>>
@@ -190,7 +190,7 @@ displayFlash();
                                     <?php endforeach; ?>
                                 </select>
                             </td>
-                            <td>
+                            <td data-label="Remarks">
                                 <input type="text" name="remarks[<?php echo $student['id']; ?>]" class="form-control"
                                        value="<?php echo htmlspecialchars($student['remarks'] ?? ''); ?>" placeholder="Optional">
                             </td>
@@ -228,15 +228,15 @@ displayFlash();
             <tbody>
                 <?php foreach ($history as $record): ?>
                 <tr>
-                    <td><code><?php echo htmlspecialchars($record['student_id']); ?></code></td>
-                    <td><?php echo htmlspecialchars($record['first_name'] . ' ' . $record['last_name']); ?></td>
-                    <td><?php echo formatDate($record['attendance_date']); ?></td>
-                    <td>
+                    <td data-label="Student ID"><code><?php echo htmlspecialchars($record['student_id']); ?></code></td>
+                    <td data-label="Name"><?php echo htmlspecialchars($record['first_name'] . ' ' . $record['last_name']); ?></td>
+                    <td data-label="Date"><?php echo formatDate($record['attendance_date']); ?></td>
+                    <td data-label="Status">
                         <span class="attendance-badge status-<?php echo strtolower($record['status']); ?>">
                             <?php echo htmlspecialchars($record['status']); ?>
                         </span>
                     </td>
-                    <td><?php echo htmlspecialchars($record['remarks'] ?? ''); ?></td>
+                    <td data-label="Remarks"><?php echo htmlspecialchars($record['remarks'] ?? ''); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

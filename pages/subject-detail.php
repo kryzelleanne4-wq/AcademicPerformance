@@ -86,14 +86,14 @@ displayFlash();
             <?php foreach ($grades as $grade): ?>
             <tr>
                 <?php if ($user['role'] !== 'student'): ?>
-                <td><?php echo htmlspecialchars($grade['student_number']); ?></td>
-                <td><?php echo htmlspecialchars($grade['first_name'] . ' ' . $grade['last_name']); ?></td>
+                <td data-label="Student ID"><?php echo htmlspecialchars($grade['student_number']); ?></td>
+                <td data-label="Student Name"><?php echo htmlspecialchars($grade['first_name'] . ' ' . $grade['last_name']); ?></td>
                 <?php endif; ?>
-                <td><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
-                <td><?php echo htmlspecialchars($grade['semester']); ?></td>
-                <td><?php echo $grade['year']; ?></td>
-                <td><?php echo $grade['score']; ?></td>
-                <td>
+                <td data-label="Section"><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
+                <td data-label="Semester"><?php echo htmlspecialchars($grade['semester']); ?></td>
+                <td data-label="Year"><?php echo $grade['year']; ?></td>
+                <td data-label="Score"><?php echo $grade['score']; ?></td>
+                <td data-label="Grade">
                     <?php
                     $gradeClass = 'grade-' . strtolower($grade['grade']);
                     ?>

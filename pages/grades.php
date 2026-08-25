@@ -200,18 +200,18 @@ displayFlash();
             <tbody>
                 <?php foreach ($gradesList as $grade): ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($grade['student_number'] . ' - ' . $grade['first_name'] . ' ' . $grade['last_name']); ?></td>
-                    <td><?php echo htmlspecialchars($grade['subject_code'] . ' - ' . $grade['subject_name']); ?></td>
-                    <td><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
-                    <td><?php echo htmlspecialchars($grade['semester']); ?></td>
-                    <td><?php echo $grade['year']; ?></td>
-                    <td><?php echo $grade['score']; ?></td>
-                    <td>
+                    <td data-label="Student"><?php echo htmlspecialchars($grade['student_number'] . ' - ' . $grade['first_name'] . ' ' . $grade['last_name']); ?></td>
+                    <td data-label="Subject"><?php echo htmlspecialchars($grade['subject_code'] . ' - ' . $grade['subject_name']); ?></td>
+                    <td data-label="Section"><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
+                    <td data-label="Semester"><?php echo htmlspecialchars($grade['semester']); ?></td>
+                    <td data-label="Year"><?php echo $grade['year']; ?></td>
+                    <td data-label="Score"><?php echo $grade['score']; ?></td>
+                    <td data-label="Grade">
                         <span class="grade-badge grade-<?php echo strtolower($grade['grade']); ?>">
                             <?php echo $grade['grade']; ?>
                         </span>
                     </td>
-                    <td>
+                    <td data-label="Actions">
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure?')">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="id" value="<?php echo $grade['id']; ?>">

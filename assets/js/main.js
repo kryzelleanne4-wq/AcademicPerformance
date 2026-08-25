@@ -14,6 +14,34 @@ if (menuToggle && sidebar) {
     });
 }
 
+// User dropdown menu (avatar toggle in the top bar).
+const userMenu = document.querySelector('.user-menu');
+const userMenuToggle = document.querySelector('.user-menu-toggle');
+
+if (userMenu && userMenuToggle) {
+    userMenuToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = userMenu.classList.toggle('open');
+        userMenuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    // Close when clicking anywhere outside the menu.
+    document.addEventListener('click', function(e) {
+        if (!userMenu.contains(e.target)) {
+            userMenu.classList.remove('open');
+            userMenuToggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Close on Escape.
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            userMenu.classList.remove('open');
+            userMenuToggle.setAttribute('aria-expanded', 'false');
+        }
+    });
+}
+
 // Confirm before delete actions
 document.querySelectorAll('.btn-danger').forEach(btn => {
     btn.addEventListener('click', function(e) {

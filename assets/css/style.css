@@ -248,6 +248,95 @@ a {
     text-transform: uppercase;
 }
 
+/* ========================================
+   User Dropdown Menu
+   ======================================== */
+.user-menu {
+    position: relative;
+}
+
+.user-menu-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--primary);
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.user-menu-toggle:hover,
+.user-menu.open .user-menu-toggle {
+    background: var(--surface-low);
+    border-color: var(--outline-soft);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    display: none;
+    min-width: 224px;
+    padding: 8px;
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-white);
+    box-shadow: 0 12px 32px rgba(17, 28, 44, 0.16);
+}
+
+.user-menu.open .user-dropdown {
+    display: block;
+}
+
+.dropdown-header {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+}
+
+.dropdown-name {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+.dropdown-id {
+    color: var(--ink-muted);
+    font-size: 12px;
+    line-height: 16px;
+}
+
+.dropdown-divider {
+    margin: 6px 0;
+    border-top: 1px solid var(--outline-hairline);
+}
+
+.user-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+.user-dropdown a:hover {
+    background: var(--surface-low);
+    color: var(--primary);
+}
+
+.user-dropdown a svg {
+    color: var(--primary);
+}
+
 .user-avatar {
     display: flex;
     width: 32px;
@@ -448,9 +537,31 @@ a {
 /* ========================================
    Tables and Cards
    ======================================== */
-.card,
-.table-container {
+.card {
     overflow: hidden;
+}
+
+.table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Visible, themed scrollbar for wide tables */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--surface-low);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--outline-soft);
+    border-radius: var(--radius-pill);
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: var(--outline);
 }
 
 .card-header,
@@ -899,6 +1010,10 @@ small {
         display: none;
     }
 
+    .user-menu-toggle {
+        padding: 4px 6px;
+    }
+
     .page-content,
     .container {
         padding: 24px 16px 40px;
@@ -930,18 +1045,74 @@ small {
         line-height: 28px;
     }
 
+    /* Responsive card-style tables: each row becomes a labeled card */
     .table-container,
     .card {
-        overflow-x: auto;
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
     }
 
-    table {
-        min-width: 720px;
+    .table-container table,
+    .card table {
+        min-width: 0;
     }
 
+    table,
+    thead,
+    tbody,
+    tr,
     th,
     td {
-        padding: 12px 16px;
+        display: block;
+    }
+
+    thead {
+        display: none;
+    }
+
+    tbody tr {
+        margin-bottom: 16px;
+        border: 1px solid var(--outline-soft);
+        border-radius: var(--radius-md);
+        background: var(--surface-white);
+    }
+
+    tbody tr:hover {
+        background: var(--surface-white) !important;
+    }
+
+    tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--outline-hairline);
+    }
+
+    tbody td:last-child {
+        border-bottom: 0;
+    }
+
+    tbody td::before {
+        content: attr(data-label);
+        flex-shrink: 0;
+        max-width: 45%;
+        color: var(--ink-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        line-height: 16px;
+        text-transform: uppercase;
+    }
+
+    tbody td form {
+        display: inline-flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
     }
 
     #addStudentModal,

@@ -113,16 +113,16 @@ displayFlash();
         <tbody>
             <?php foreach ($records as $record): ?>
             <tr>
-                <td><?php echo formatDate($record['attendance_date']); ?></td>
-                <td><?php echo htmlspecialchars($record['subject_code'] . ' - ' . $record['subject_name']); ?></td>
-                <td><code><?php echo htmlspecialchars($record['section_code']); ?></code></td>
-                <td><?php echo htmlspecialchars($record['schedule'] ?? '—'); ?></td>
-                <td>
+                <td data-label="Date"><?php echo formatDate($record['attendance_date']); ?></td>
+                <td data-label="Subject"><?php echo htmlspecialchars($record['subject_code'] . ' - ' . $record['subject_name']); ?></td>
+                <td data-label="Section"><code><?php echo htmlspecialchars($record['section_code']); ?></code></td>
+                <td data-label="Schedule"><?php echo htmlspecialchars($record['schedule'] ?? '—'); ?></td>
+                <td data-label="Status">
                     <span class="attendance-badge status-<?php echo strtolower($record['status']); ?>">
                         <?php echo htmlspecialchars($record['status']); ?>
                     </span>
                 </td>
-                <td><?php echo htmlspecialchars($record['remarks'] ?? ''); ?></td>
+                <td data-label="Remarks"><?php echo htmlspecialchars($record['remarks'] ?? ''); ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

@@ -98,18 +98,18 @@ displayFlash();
             <tbody>
                 <?php foreach ($enrollments as $enrollment): ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($enrollment['student_id'] . ' - ' . $enrollment['first_name'] . ' ' . $enrollment['last_name']); ?></td>
-                    <td><?php echo htmlspecialchars($enrollment['subject_code'] . ' - ' . $enrollment['subject_name']); ?></td>
-                    <td><code><?php echo htmlspecialchars($enrollment['section_code']); ?></code></td>
-                    <td><?php echo htmlspecialchars($enrollment['schedule'] ?? '—'); ?></td>
-                    <td><?php echo htmlspecialchars($enrollment['term_name'] . ' ' . $enrollment['academic_year']); ?></td>
-                    <td>
+                    <td data-label="Student"><?php echo htmlspecialchars($enrollment['student_id'] . ' - ' . $enrollment['first_name'] . ' ' . $enrollment['last_name']); ?></td>
+                    <td data-label="Subject"><?php echo htmlspecialchars($enrollment['subject_code'] . ' - ' . $enrollment['subject_name']); ?></td>
+                    <td data-label="Section"><code><?php echo htmlspecialchars($enrollment['section_code']); ?></code></td>
+                    <td data-label="Schedule"><?php echo htmlspecialchars($enrollment['schedule'] ?? '—'); ?></td>
+                    <td data-label="Term"><?php echo htmlspecialchars($enrollment['term_name'] . ' ' . $enrollment['academic_year']); ?></td>
+                    <td data-label="Status">
                         <span class="attendance-badge status-<?php echo $enrollment['status'] === 'Enrolled' ? 'present' : 'absent'; ?>">
                             <?php echo htmlspecialchars($enrollment['status']); ?>
                         </span>
                     </td>
-                    <td><?php echo formatDate($enrollment['enrolled_at']); ?></td>
-                    <td>
+                    <td data-label="Enrolled At"><?php echo formatDate($enrollment['enrolled_at']); ?></td>
+                    <td data-label="Actions">
                         <?php if ($enrollment['status'] === 'Enrolled'): ?>
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Drop this enrollment?')">
                             <input type="hidden" name="action" value="drop">

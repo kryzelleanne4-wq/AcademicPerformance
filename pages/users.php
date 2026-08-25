@@ -158,19 +158,19 @@ displayFlash();
             <tbody>
                 <?php foreach ($allUsers as $u): ?>
                 <tr>
-                    <td><code><?php echo htmlspecialchars($u['login_id']); ?></code></td>
-                    <td><?php echo htmlspecialchars($u['display_name']); ?></td>
-                    <td>
+                    <td data-label="Login ID"><code><?php echo htmlspecialchars($u['login_id']); ?></code></td>
+                    <td data-label="Name"><?php echo htmlspecialchars($u['display_name']); ?></td>
+                    <td data-label="Role">
                         <span class="grade-badge role-<?php echo $u['role']; ?>"><?php echo roleLabel($u['role']); ?></span>
                     </td>
-                    <td><?php echo htmlspecialchars($u['email'] ?? ''); ?></td>
-                    <td>
+                    <td data-label="Email"><?php echo htmlspecialchars($u['email'] ?? ''); ?></td>
+                    <td data-label="Status">
                         <span class="attendance-badge status-<?php echo $u['is_active'] ? 'present' : 'absent'; ?>">
                             <?php echo $u['is_active'] ? 'Active' : 'Inactive'; ?>
                         </span>
                     </td>
-                    <td><?php echo $u['last_login_at'] ? formatDate($u['last_login_at']) : 'Never'; ?></td>
-                    <td>
+                    <td data-label="Last Login"><?php echo $u['last_login_at'] ? formatDate($u['last_login_at']) : 'Never'; ?></td>
+                    <td data-label="Actions">
                         <?php if ($u['role'] !== 'admin'): ?>
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="action" value="toggle_active">
