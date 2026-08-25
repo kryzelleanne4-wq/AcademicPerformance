@@ -653,23 +653,23 @@ tbody tr:hover {
     line-height: 16px;
 }
 
-.grade-badge.grade-a {
+/* 5-to-1 numeric grade bands: 1.00 best -> 5.00 failing */
+.grade-badge.grade-top {
     background: var(--success-soft);
     color: var(--success);
 }
 
-.grade-badge.grade-b {
+.grade-badge.grade-good {
     background: var(--primary-soft);
     color: var(--primary-container);
 }
 
-.grade-badge.grade-c,
-.grade-badge.grade-d {
+.grade-badge.grade-pass {
     background: var(--warning-soft);
     color: var(--warning);
 }
 
-.grade-badge.grade-f {
+.grade-badge.grade-fail {
     background: var(--error-soft);
     color: var(--error);
 }
@@ -783,6 +783,189 @@ tbody tr:hover {
 small {
     color: var(--ink-muted);
     font-size: 12px;
+}
+
+/* ========================================
+   Score Sheet (Excel-like grading grid)
+   ======================================== */
+.score-sheet {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.score-sheet-table {
+    min-width: 760px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.score-sheet-table th {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.score-sheet-table th small,
+.score-sheet-table .score-sheet-table th small {
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+}
+
+.score-sheet-table td {
+    vertical-align: middle;
+}
+
+.score-sheet-table td[data-label="Student"] {
+    min-width: 200px;
+    white-space: nowrap;
+}
+
+.component-score {
+    width: 84px;
+    min-height: 36px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.component-score.is-over {
+    border-color: var(--error) !important;
+    color: var(--error) !important;
+    background: var(--error-soft);
+}
+
+.component-score[readonly] {
+    background: var(--surface-low);
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+.overall-cell {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+.grade-cell {
+    white-space: nowrap;
+}
+
+.score-sheet-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--outline-soft);
+    color: var(--ink-muted);
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .score-sheet-table {
+        min-width: 640px;
+    }
+    .component-score {
+        width: 64px;
+    }
+    .score-sheet-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* Component management modal */
+.modal-box-wide {
+    width: min(100%, 680px);
+}
+
+.component-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.component-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.component-row .component-delete {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    accent-color: var(--error);
+}
+
+.component-row .form-control[placeholder="Name"] {
+    flex: 2;
+}
+
+.component-row .form-control[placeholder="Max"],
+.component-row .form-control[placeholder="Weight %"] {
+    flex: 1;
+}
+
+@media (max-width: 480px) {
+    .component-row {
+        flex-wrap: wrap;
+    }
+    .component-row .form-control[placeholder="Name"] {
+        flex: 1 1 100%;
+    }
+}
+
+/* ========================================
+   Filter Bars
+   ======================================== */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.filter-bar label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+.filter-bar .form-control {
+    width: auto;
+    min-width: 150px;
+    min-height: 32px;
+    padding: 4px 10px;
+    font-size: 13px;
+}
+
+.filter-bar .btn-sm {
+    min-height: 32px;
+}
+
+@media (max-width: 768px) {
+    .filter-bar,
+    .filter-bar form {
+        width: 100%;
+    }
+
+    .filter-bar label {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .filter-bar .form-control {
+        width: 100%;
+        min-width: 0;
+    }
 }
 
 /* ========================================

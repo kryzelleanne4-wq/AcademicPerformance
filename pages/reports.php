@@ -17,12 +17,17 @@ $stmt = $db->query("
         s.last_name,
         COUNT(g.id) as total_subjects,
         ROUND(AVG(g.score), 2) as average_score,
-        CASE 
-            WHEN AVG(g.score) >= 90 THEN 'A'
-            WHEN AVG(g.score) >= 80 THEN 'B'
-            WHEN AVG(g.score) >= 70 THEN 'C'
-            WHEN AVG(g.score) >= 60 THEN 'D'
-            ELSE 'F'
+        CASE
+            WHEN AVG(g.score) >= 96 THEN '1.00'
+            WHEN AVG(g.score) >= 93 THEN '1.25'
+            WHEN AVG(g.score) >= 90 THEN '1.50'
+            WHEN AVG(g.score) >= 88 THEN '1.75'
+            WHEN AVG(g.score) >= 85 THEN '2.00'
+            WHEN AVG(g.score) >= 83 THEN '2.25'
+            WHEN AVG(g.score) >= 80 THEN '2.50'
+            WHEN AVG(g.score) >= 78 THEN '2.75'
+            WHEN AVG(g.score) >= 75 THEN '3.00'
+            ELSE '5.00'
         END as average_grade
     FROM students s
     LEFT JOIN grades g ON s.id = g.student_id
@@ -62,8 +67,8 @@ include '../includes/header.php';
                         <td data-label="Average Score"><?php echo $row['average_score'] ?? 'N/A'; ?></td>
                         <td data-label="Grade">
                             <?php if ($row['average_grade']): ?>
-                            <span class="grade-badge grade-<?php echo strtolower($row['average_grade']); ?>">
-                                <?php echo $row['average_grade']; ?>
+                            <span class="grade-badge <?php echo gradeBadgeClass($row['average_grade']); ?>" title="<?php echo htmlspecialchars(gradeDescriptor($row['average_grade'])); ?>">
+                                <?php echo htmlspecialchars(formatGrade($row['average_grade'])); ?>
                             </span>
                             <?php else: ?>
                             <span>No grades</span>

@@ -94,11 +94,8 @@ displayFlash();
                 <td data-label="Year"><?php echo $grade['year']; ?></td>
                 <td data-label="Score"><?php echo $grade['score']; ?></td>
                 <td data-label="Grade">
-                    <?php
-                    $gradeClass = 'grade-' . strtolower($grade['grade']);
-                    ?>
-                    <span class="grade-badge <?php echo $gradeClass; ?>">
-                        <?php echo $grade['grade']; ?>
+                    <span class="grade-badge <?php echo gradeBadgeClass($grade['grade']); ?>" title="<?php echo htmlspecialchars(gradeDescriptor($grade['grade'])); ?>">
+                        <?php echo htmlspecialchars(formatGrade($grade['grade'])); ?>
                     </span>
                 </td>
             </tr>

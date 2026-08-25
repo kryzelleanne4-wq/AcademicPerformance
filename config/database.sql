@@ -89,7 +89,16 @@ try {
 
     $db->exec("\n        CREATE TABLE IF NOT EXISTS enrollments (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            student_id INTEGER NOT NULL,\n            section_id INTEGER NOT NULL,\n            enrolled_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            status TEXT NOT NULL DEFAULT 'Enrolled' CHECK(status IN ('Enrolled', 'Dropped', 'Completed', 'Withdrawn')),\n            final_score REAL CHECK(final_score IS NULL OR final_score BETWEEN 0 AND 100),\n            final_grade TEXT,\n            remarks TEXT,\n            UNIQUE(student_id, section_id),\n            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,\n            FOREIGN KEY (section_id) REFERENCES course_sections(id) ON DELETE CASCADE\n        )\n    ");
 
-    // Attendance tracking per student per section per day.
+    // Assessment components define the weight/max for a subject's grading
+    // components (Quiz, Assignment, Exam, etc.) used by the Excel-style
+    // editable score sheet. Defaults are seeded for existing subjects.
+    $db->exec("\n        CREATE TABLE IF NOT EXISTS assessment_components (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            subject_id INTEGER NOT NULL,\n            term_id INTEGER,\n            component_name TEXT NOT NULL,\n            max_score REAL NOT NULL CHECK(max_score > 0),\n            weight REAL NOT NULL CHECK(weight >= 0 AND weight <= 100),\n            sort_order INTEGER NOT NULL DEFAULT 0,\n            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,\n            FOREIGN KEY (term_id) REFERENCES academic_terms(id) ON DELETE CASCADE\n        )\n    ");
+
+    // Component scores per grade record (link to grades.id) so each grade
+    // keeps its own set of component scores.
+    $db->exec("\n        CREATE TABLE IF NOT EXISTS grade_scores (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            grade_id INTEGER NOT NULL,\n            component_id INTEGER NOT NULL,\n            score REAL CHECK(score IS NULL OR score >= 0),\n            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            UNIQUE(grade_id, component_id),\n            FOREIGN KEY (grade_id) REFERENCES grades(id) ON DELETE CASCADE,\n            FOREIGN KEY (component_id) REFERENCES assessment_components(id) ON DELETE CASCADE\n        )\n    ");
+
+    // attendance tracking per student per section per day (kept as-is).
     $db->exec("\n        CREATE TABLE IF NOT EXISTS attendance (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            student_id INTEGER NOT NULL,\n            section_id INTEGER NOT NULL,\n            attendance_date DATE NOT NULL,\n            status TEXT NOT NULL DEFAULT 'Present' CHECK(status IN ('Present', 'Absent', 'Late', 'Excused')),\n            remarks TEXT,\n            recorded_by INTEGER,\n            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            UNIQUE(student_id, section_id, attendance_date),\n            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,\n            FOREIGN KEY (section_id) REFERENCES course_sections(id) ON DELETE CASCADE,\n            FOREIGN KEY (recorded_by) REFERENCES instructors(id) ON DELETE SET NULL\n        )\n    ");
 
     // grades remains the page-facing final-grade table. New records can point
@@ -120,7 +129,9 @@ try {
         'CREATE INDEX IF NOT EXISTS idx_grades_subject_term ON grades(subject_id, year, semester)',
         'CREATE INDEX IF NOT EXISTS idx_grades_instructor ON grades(instructor_id)',
         'CREATE INDEX IF NOT EXISTS idx_attendance_section_date ON attendance(section_id, attendance_date)',
-        'CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON attendance(student_id, attendance_date)'
+        'CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON attendance(student_id, attendance_date)',
+        'CREATE INDEX IF NOT EXISTS idx_components_subject ON assessment_components(subject_id)',
+        'CREATE INDEX IF NOT EXISTS idx_grade_scores_grade ON grade_scores(grade_id)'
     ];
     foreach ($indexes as $indexSql) {
         $db->exec($indexSql);

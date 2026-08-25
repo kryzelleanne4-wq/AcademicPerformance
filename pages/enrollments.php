@@ -141,7 +141,7 @@ displayFlash();
                                 data-status="<?php echo htmlspecialchars($enrollment['status'], ENT_QUOTES); ?>"
                                 data-remarks="<?php echo htmlspecialchars($enrollment['remarks'] ?? '', ENT_QUOTES); ?>"
                                 data-final-score="<?php echo $enrollment['final_score'] ?? ''; ?>"
-                                data-final-grade="<?php echo htmlspecialchars($enrollment['final_grade'] ?? '', ENT_QUOTES); ?>"
+                                data-final-grade="<?php echo htmlspecialchars(formatGrade($enrollment['final_grade'] ?? ''), ENT_QUOTES); ?>"
                                 data-enrolled-at="<?php echo htmlspecialchars($enrollment['enrolled_at'], ENT_QUOTES); ?>"
                                 onclick="viewEnrollment(this)">View</button>
                         <button type="button" class="btn btn-secondary btn-sm"

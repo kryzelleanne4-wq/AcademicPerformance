@@ -29,12 +29,17 @@ $stmt = $db->prepare("
         s.last_name,
         COUNT(DISTINCT g.subject_id) as total_subjects,
         ROUND(AVG(g.score), 2) as final_average,
-        CASE 
-            WHEN AVG(g.score) >= 90 THEN 'A'
-            WHEN AVG(g.score) >= 80 THEN 'B'
-            WHEN AVG(g.score) >= 70 THEN 'C'
-            WHEN AVG(g.score) >= 60 THEN 'D'
-            ELSE 'F'
+        CASE
+            WHEN AVG(g.score) >= 96 THEN '1.00'
+            WHEN AVG(g.score) >= 93 THEN '1.25'
+            WHEN AVG(g.score) >= 90 THEN '1.50'
+            WHEN AVG(g.score) >= 88 THEN '1.75'
+            WHEN AVG(g.score) >= 85 THEN '2.00'
+            WHEN AVG(g.score) >= 83 THEN '2.25'
+            WHEN AVG(g.score) >= 80 THEN '2.50'
+            WHEN AVG(g.score) >= 78 THEN '2.75'
+            WHEN AVG(g.score) >= 75 THEN '3.00'
+            ELSE '5.00'
         END as final_grade,
         SUM(sub.credits) as total_credits
     FROM students s
@@ -77,9 +82,8 @@ displayFlash();
                 <td data-label="Credits"><?php echo $row['total_credits']; ?></td>
                 <td data-label="Final Average"><?php echo $row['final_average']; ?></td>
                 <td data-label="Final Grade">
-                    <?php $gradeClass = 'grade-' . strtolower($row['final_grade']); ?>
-                    <span class="grade-badge <?php echo $gradeClass; ?>">
-                        <?php echo $row['final_grade']; ?>
+                    <span class="grade-badge <?php echo gradeBadgeClass($row['final_grade']); ?>" title="<?php echo htmlspecialchars(gradeDescriptor($row['final_grade'])); ?>">
+                        <?php echo htmlspecialchars(formatGrade($row['final_grade'])); ?>
                     </span>
                 </td>
             </tr>

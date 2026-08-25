@@ -10,24 +10,54 @@ requireRole('student');
 $db = getDB();
 $student = currentStudent();
 
-// Excel export of the same table shown on screen.
-if (isset($_GET['export']) && $_GET['export'] === 'excel') {
-    $stmt = $db->prepare("
-        SELECT st.student_id, st.first_name, st.last_name,
-               sub.subject_code || ' - ' || sub.subject_name AS subject,
-               cs.section_code, a.attendance_date, a.status, a.remarks
+// Date-range filter.
+$dateFrom = sanitize($_GET['from'] ?? '');
+$dateTo = sanitize($_GET['to'] ?? '');
+if ($dateFrom && !strtotime($dateFrom)) {
+    $dateFrom = '';
+}
+if ($dateTo && !strtotime($dateTo)) {
+    $dateTo = '';
+}
+
+// Build the shared record query (used by both the table and the export).
+function myAttendanceSql() {
+    global $dateFrom, $dateTo;
+    $sql = "
+        SELECT a.attendance_date, a.status, a.remarks,
+               cs.section_code, cs.schedule,
+               sub.subject_code, sub.subject_name
         FROM attendance a
-        JOIN students st ON a.student_id = st.id
         JOIN course_sections cs ON a.section_id = cs.id
         JOIN subjects sub ON cs.subject_id = sub.id
         WHERE a.student_id = :sid
-        ORDER BY a.attendance_date DESC
-    ");
-    $stmt->execute([':sid' => $student['id']]);
+    ";
+    if ($dateFrom) {
+        $sql .= ' AND a.attendance_date >= :from';
+    }
+    if ($dateTo) {
+        $sql .= ' AND a.attendance_date <= :to';
+    }
+    $sql .= ' ORDER BY a.attendance_date DESC';
+    return $sql;
+}
+
+// Excel export of the same filtered table shown on screen.
+if (isset($_GET['export']) && $_GET['export'] === 'excel') {
+    $sql = myAttendanceSql();
+    $params = [':sid' => $student['id']];
+    if ($dateFrom) {
+        $params[':from'] = $dateFrom;
+    }
+    if ($dateTo) {
+        $params[':to'] = $dateTo;
+    }
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
     exportExcel('my-attendance', [
-        'Student ID', 'First Name', 'Last Name', 'Subject', 'Section', 'Date', 'Status', 'Remarks'
+        'Date', 'Subject Code', 'Subject Name', 'Section', 'Schedule', 'Status', 'Remarks'
     ], pickColumns($stmt->fetchAll(), [
-        'student_id', 'first_name', 'last_name', 'subject', 'section_code', 'attendance_date', 'status', 'remarks'
+        'attendance_date', 'subject_code', 'subject_name', 'section_code', 'schedule', 'status', 'remarks'
     ]));
 }
 
@@ -43,18 +73,16 @@ $summaryStmt = $db->prepare("
 $summaryStmt->execute([':sid' => $student['id']]);
 $summary = $summaryStmt->fetch();
 
-// Attendance records for the student's enrolled sections.
-$recordsStmt = $db->prepare("
-    SELECT a.attendance_date, a.status, a.remarks,
-           cs.section_code, cs.schedule,
-           sub.subject_code, sub.subject_name
-    FROM attendance a
-    JOIN course_sections cs ON a.section_id = cs.id
-    JOIN subjects sub ON cs.subject_id = sub.id
-    WHERE a.student_id = :sid
-    ORDER BY a.attendance_date DESC
-");
-$recordsStmt->execute([':sid' => $student['id']]);
+// Attendance records for the student's enrolled sections (optionally filtered).
+$recordsStmt = $db->prepare(myAttendanceSql());
+$recordsParams = [':sid' => $student['id']];
+if ($dateFrom) {
+    $recordsParams[':from'] = $dateFrom;
+}
+if ($dateTo) {
+    $recordsParams[':to'] = $dateTo;
+}
+$recordsStmt->execute($recordsParams);
 $records = $recordsStmt->fetchAll();
 
 $pageTitle = 'My Attendance';
@@ -95,8 +123,26 @@ displayFlash();
 
 <div class="table-container">
     <div class="table-header">
-        <h2><?php echo icon('calendar-check', 24); ?> My Attendance</h2>
-        <a href="?export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
+        <h2><?php echo icon('calendar-check', 24); ?> My Attendance
+            <small style="display: block; color: var(--ink-muted); font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0;">
+                <?php echo count($records); ?> record(s)
+            </small>
+        </h2>
+        <div class="filter-bar">
+            <form method="GET" class="filter-bar">
+                <label>From
+                    <input type="date" name="from" class="form-control" value="<?php echo htmlspecialchars($dateFrom); ?>">
+                </label>
+                <label>To
+                    <input type="date" name="to" class="form-control" value="<?php echo htmlspecialchars($dateTo); ?>">
+                </label>
+                <button type="submit" class="btn btn-primary btn-sm"><?php echo icon('filter', 14); ?> Filter</button>
+                <?php if ($dateFrom || $dateTo): ?>
+                <a href="my-attendance.php" class="btn btn-secondary btn-sm">Reset</a>
+                <?php endif; ?>
+            </form>
+            <a href="?export=excel<?php echo $dateFrom ? '&from=' . urlencode($dateFrom) : ''; ?><?php echo $dateTo ? '&to=' . urlencode($dateTo) : ''; ?>" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
+        </div>
     </div>
 
     <table>

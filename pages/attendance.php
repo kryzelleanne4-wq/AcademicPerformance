@@ -43,6 +43,16 @@ $sections = $sectionsStmt->fetchAll();
 $sectionId = intval($_GET['section_id'] ?? $_POST['section_id'] ?? 0);
 $date = sanitize($_GET['date'] ?? $_POST['date'] ?? date('Y-m-d'));
 
+// Date-range filter for the attendance records list.
+$dateFrom = sanitize($_GET['from'] ?? '');
+$dateTo = sanitize($_GET['to'] ?? '');
+if ($dateFrom && !strtotime($dateFrom)) {
+    $dateFrom = '';
+}
+if ($dateTo && !strtotime($dateTo)) {
+    $dateTo = '';
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'save') {
     if (!$canRecord) {
         setFlash('Admins can view attendance records but only teachers can record them.', 'error');
@@ -85,9 +95,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
     exit();
 }
 
-// Excel export of the records list (same columns as the on-screen table).
+// Excel export of the records list (same columns and filters as the on-screen table).
 if (isset($_GET['export']) && $_GET['export'] === 'excel' && $sectionId) {
-    $stmt = $db->prepare("
+    $sql = "
         SELECT st.student_id, st.first_name, st.last_name,
                sub.subject_code || ' - ' || sub.subject_name AS subject,
                cs.section_code, a.attendance_date, a.status, a.remarks
@@ -96,9 +106,20 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $sectionId) {
         JOIN course_sections cs ON a.section_id = cs.id
         JOIN subjects sub ON cs.subject_id = sub.id
         WHERE a.section_id = :sid
-        ORDER BY a.attendance_date DESC, st.last_name
-    ");
-    $stmt->execute([':sid' => $sectionId]);
+    ";
+    $params = [':sid' => $sectionId];
+    if ($dateFrom) {
+        $sql .= ' AND a.attendance_date >= :from';
+        $params[':from'] = $dateFrom;
+    }
+    if ($dateTo) {
+        $sql .= ' AND a.attendance_date <= :to';
+        $params[':to'] = $dateTo;
+    }
+    $sql .= ' ORDER BY a.attendance_date DESC, st.last_name';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
     exportExcel('attendance-section-' . $sectionId, [
         'Student ID', 'First Name', 'Last Name', 'Subject', 'Section', 'Date', 'Status', 'Remarks'
     ], pickColumns($stmt->fetchAll(), [
@@ -122,18 +143,28 @@ if ($sectionId) {
     $roster = $stmt->fetchAll();
 }
 
-// Recent attendance history for the selected section.
+// Attendance history for the selected section (optionally filtered by date range).
 $history = [];
 if ($sectionId) {
-    $stmt = $db->prepare("
+    $sql = "
         SELECT st.student_id, st.first_name, st.last_name, a.attendance_date, a.status, a.remarks
         FROM attendance a
         JOIN students st ON a.student_id = st.id
         WHERE a.section_id = :sid
-        ORDER BY a.attendance_date DESC, st.last_name
-        LIMIT 100
-    ");
-    $stmt->execute([':sid' => $sectionId]);
+    ";
+    $params = [':sid' => $sectionId];
+    if ($dateFrom) {
+        $sql .= ' AND a.attendance_date >= :from';
+        $params[':from'] = $dateFrom;
+    }
+    if ($dateTo) {
+        $sql .= ' AND a.attendance_date <= :to';
+        $params[':to'] = $dateTo;
+    }
+    $sql .= ' ORDER BY a.attendance_date DESC, st.last_name LIMIT 500';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
     $history = $stmt->fetchAll();
 }
 
@@ -228,8 +259,28 @@ displayFlash();
     <?php if ($sectionId): ?>
     <div class="card" style="margin-top: 24px;">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2><?php echo icon('file-text', 24); ?> Attendance Records</h2>
-            <a href="?section_id=<?php echo $sectionId; ?>&export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
+            <h2><?php echo icon('file-text', 24); ?> Attendance Records
+                <small style="display: block; color: var(--ink-muted); font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0;">
+                    <?php echo count($history); ?> record(s)
+                    <?php if ($dateFrom || $dateTo): ?>&middot; filtered by date<?php endif; ?>
+                </small>
+            </h2>
+            <div class="filter-bar">
+                <form method="GET" class="filter-bar">
+                    <input type="hidden" name="section_id" value="<?php echo $sectionId; ?>">
+                    <label>From
+                        <input type="date" name="from" class="form-control" value="<?php echo htmlspecialchars($dateFrom); ?>">
+                    </label>
+                    <label>To
+                        <input type="date" name="to" class="form-control" value="<?php echo htmlspecialchars($dateTo); ?>">
+                    </label>
+                    <button type="submit" class="btn btn-primary btn-sm"><?php echo icon('filter', 14); ?> Filter</button>
+                    <?php if ($dateFrom || $dateTo): ?>
+                    <a href="?section_id=<?php echo $sectionId; ?>" class="btn btn-secondary btn-sm">Reset</a>
+                    <?php endif; ?>
+                </form>
+                <a href="?section_id=<?php echo $sectionId; ?>&export=excel<?php echo $dateFrom ? '&from=' . urlencode($dateFrom) : ''; ?><?php echo $dateTo ? '&to=' . urlencode($dateTo) : ''; ?>" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
+            </div>
         </div>
         <table>
             <thead>
