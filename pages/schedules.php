@@ -83,6 +83,47 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit();
             break;
 
+        case 'update_section':
+            $id = intval($_POST['id'] ?? 0);
+            $subject_id = intval($_POST['subject_id'] ?? 0);
+            $instructor_id = intval($_POST['instructor_id'] ?? 0);
+            $term_id = intval($_POST['term_id'] ?? 0);
+            $section_code = sanitize($_POST['section_code'] ?? '');
+            $room = sanitize($_POST['room'] ?? '');
+            $schedule = sanitize($_POST['schedule'] ?? '');
+            $capacity = intval($_POST['capacity'] ?? 0);
+            $status = sanitize($_POST['status'] ?? 'Open');
+
+            $validStatuses = ['Open', 'Closed', 'Completed', 'Cancelled'];
+            if (!in_array($status, $validStatuses, true)) {
+                $status = 'Open';
+            }
+
+            if (!$id || !$subject_id || !$instructor_id || !$term_id || $section_code === '') {
+                setFlash('Subject, instructor, term and section code are required.', 'error');
+            } else {
+                try {
+                    $stmt = $db->prepare("UPDATE course_sections SET subject_id = :s, instructor_id = :i, term_id = :t, section_code = :c, room = :r, schedule = :sch, capacity = :cap, status = :st, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
+                    $stmt->execute([
+                        ':s'   => $subject_id,
+                        ':i'   => $instructor_id,
+                        ':t'   => $term_id,
+                        ':c'   => $section_code,
+                        ':r'   => $room ?: null,
+                        ':sch' => $schedule ?: null,
+                        ':cap' => $capacity ?: null,
+                        ':st'  => $status,
+                        ':id'  => $id
+                    ]);
+                    setFlash('Schedule updated successfully!');
+                } catch (Exception $e) {
+                    setFlash('Error updating schedule: ' . $e->getMessage(), 'error');
+                }
+            }
+            header('Location: schedules.php');
+            exit();
+            break;
+
         case 'delete_section':
             $id = intval($_POST['id'] ?? 0);
             try {
@@ -138,6 +179,7 @@ displayFlash();
                     <th>Room</th>
                     <th>Capacity</th>
                     <th>Enrolled</th>
+                    <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -152,7 +194,35 @@ displayFlash();
                     <td data-label="Room"><?php echo htmlspecialchars($section['room'] ?? '—'); ?></td>
                     <td data-label="Capacity"><?php echo $section['capacity'] ?: '—'; ?></td>
                     <td data-label="Enrolled"><?php echo $section['enrolled_count']; ?></td>
+                    <td data-label="Status">
+                        <span class="attendance-badge status-<?php echo $section['status'] === 'Open' ? 'present' : 'absent'; ?>">
+                            <?php echo htmlspecialchars($section['status']); ?>
+                        </span>
+                    </td>
                     <td data-label="Actions">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                data-id="<?php echo $section['id']; ?>"
+                                data-section-code="<?php echo htmlspecialchars($section['section_code'], ENT_QUOTES); ?>"
+                                data-subject="<?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name'], ENT_QUOTES); ?>"
+                                data-instructor="<?php echo htmlspecialchars($section['first_name'] . ' ' . $section['last_name'], ENT_QUOTES); ?>"
+                                data-term="<?php echo htmlspecialchars($section['term_name'] . ' ' . $section['academic_year'], ENT_QUOTES); ?>"
+                                data-schedule="<?php echo htmlspecialchars($section['schedule'] ?? '', ENT_QUOTES); ?>"
+                                data-room="<?php echo htmlspecialchars($section['room'] ?? '', ENT_QUOTES); ?>"
+                                data-capacity="<?php echo $section['capacity'] ?: ''; ?>"
+                                data-status="<?php echo htmlspecialchars($section['status'], ENT_QUOTES); ?>"
+                                data-enrolled="<?php echo $section['enrolled_count']; ?>"
+                                onclick="viewSection(this)">View</button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                data-id="<?php echo $section['id']; ?>"
+                                data-subject-id="<?php echo (int) $section['subject_id']; ?>"
+                                data-instructor-id="<?php echo (int) $section['instructor_id']; ?>"
+                                data-term-id="<?php echo (int) $section['term_id']; ?>"
+                                data-section-code="<?php echo htmlspecialchars($section['section_code'], ENT_QUOTES); ?>"
+                                data-room="<?php echo htmlspecialchars($section['room'] ?? '', ENT_QUOTES); ?>"
+                                data-schedule="<?php echo htmlspecialchars($section['schedule'] ?? '', ENT_QUOTES); ?>"
+                                data-capacity="<?php echo $section['capacity'] ?: ''; ?>"
+                                data-status="<?php echo htmlspecialchars($section['status'], ENT_QUOTES); ?>"
+                                onclick="editSection(this)">Edit</button>
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this schedule?')">
                             <input type="hidden" name="action" value="delete_section">
                             <input type="hidden" name="id" value="<?php echo $section['id']; ?>">
@@ -239,6 +309,109 @@ displayFlash();
     </div>
 </div>
 
+<!-- View Schedule Modal -->
+<div id="viewSectionModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <h2><?php echo icon('calendar', 20); ?> Schedule Details</h2>
+        <div class="detail-list">
+            <div class="detail-row"><span class="detail-label">Section</span><span class="detail-value" id="viewSecCode"></span></div>
+            <div class="detail-row"><span class="detail-label">Subject</span><span class="detail-value" id="viewSecSubject"></span></div>
+            <div class="detail-row"><span class="detail-label">Instructor</span><span class="detail-value" id="viewSecInstructor"></span></div>
+            <div class="detail-row"><span class="detail-label">Term</span><span class="detail-value" id="viewSecTerm"></span></div>
+            <div class="detail-row"><span class="detail-label">Schedule</span><span class="detail-value" id="viewSecSchedule"></span></div>
+            <div class="detail-row"><span class="detail-label">Room</span><span class="detail-value" id="viewSecRoom"></span></div>
+            <div class="detail-row"><span class="detail-label">Capacity</span><span class="detail-value" id="viewSecCapacity"></span></div>
+            <div class="detail-row"><span class="detail-label">Enrolled</span><span class="detail-value" id="viewSecEnrolled"></span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="viewSecStatus"></span></div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('viewSectionModal').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Schedule Modal -->
+<div id="editSectionModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <h2><?php echo icon('pen-line', 20); ?> Edit Schedule</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="update_section">
+            <input type="hidden" name="id" id="editSecId">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Subject</label>
+                    <select name="subject_id" id="editSecSubject" class="form-control" required>
+                        <?php foreach ($subjects as $subject): ?>
+                        <option value="<?php echo $subject['id']; ?>">
+                            <?php echo htmlspecialchars($subject['subject_code'] . ' - ' . $subject['subject_name']); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Section Code</label>
+                    <input type="text" name="section_code" id="editSecCode" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Instructor</label>
+                    <select name="instructor_id" id="editSecInstructor" class="form-control" required>
+                        <?php foreach ($instructors as $instructor): ?>
+                        <option value="<?php echo $instructor['id']; ?>">
+                            <?php echo htmlspecialchars($instructor['first_name'] . ' ' . $instructor['last_name'] . ' (' . $instructor['employee_id'] . ')'); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Term</label>
+                    <select name="term_id" id="editSecTerm" class="form-control" required>
+                        <?php foreach ($terms as $term): ?>
+                        <option value="<?php echo $term['id']; ?>">
+                            <?php echo htmlspecialchars($term['term_name'] . ' ' . $term['academic_year'] . ($term['is_current'] ? ' (Current)' : '')); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Schedule (Days / Time)</label>
+                    <input type="text" name="schedule" id="editSecSchedule" class="form-control" placeholder="e.g. Mon & Wed, 8:00 - 9:30 AM">
+                </div>
+                <div class="form-group">
+                    <label>Room</label>
+                    <input type="text" name="room" id="editSecRoom" class="form-control" placeholder="e.g. Room 201">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Capacity</label>
+                    <input type="number" name="capacity" id="editSecCapacity" class="form-control" min="1" placeholder="e.g. 40">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status" id="editSecStatus" class="form-control">
+                        <?php foreach (['Open', 'Closed', 'Completed', 'Cancelled'] as $status): ?>
+                        <option value="<?php echo $status; ?>"><?php echo $status; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-success">Save Changes</button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('editSectionModal').style.display='none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Add Term Modal -->
 <div id="addTermModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
@@ -284,7 +457,33 @@ displayFlash();
 </div>
 
 <script>
-    ['addSectionModal', 'addTermModal'].forEach(function(id) {
+    function viewSection(btn) {
+        document.getElementById('viewSecCode').textContent = btn.dataset.sectionCode;
+        document.getElementById('viewSecSubject').textContent = btn.dataset.subject;
+        document.getElementById('viewSecInstructor').textContent = btn.dataset.instructor;
+        document.getElementById('viewSecTerm').textContent = btn.dataset.term;
+        document.getElementById('viewSecSchedule').textContent = btn.dataset.schedule || '—';
+        document.getElementById('viewSecRoom').textContent = btn.dataset.room || '—';
+        document.getElementById('viewSecCapacity').textContent = btn.dataset.capacity || '—';
+        document.getElementById('viewSecEnrolled').textContent = btn.dataset.enrolled;
+        document.getElementById('viewSecStatus').textContent = btn.dataset.status;
+        document.getElementById('viewSectionModal').style.display = 'block';
+    }
+
+    function editSection(btn) {
+        document.getElementById('editSecId').value = btn.dataset.id;
+        document.getElementById('editSecSubject').value = btn.dataset.subjectId;
+        document.getElementById('editSecInstructor').value = btn.dataset.instructorId;
+        document.getElementById('editSecTerm').value = btn.dataset.termId;
+        document.getElementById('editSecCode').value = btn.dataset.sectionCode;
+        document.getElementById('editSecRoom').value = btn.dataset.room || '';
+        document.getElementById('editSecSchedule').value = btn.dataset.schedule || '';
+        document.getElementById('editSecCapacity').value = btn.dataset.capacity || '';
+        document.getElementById('editSecStatus').value = btn.dataset.status;
+        document.getElementById('editSectionModal').style.display = 'block';
+    }
+
+    ['addSectionModal', 'addTermModal', 'viewSectionModal', 'editSectionModal'].forEach(function(id) {
         document.getElementById(id).addEventListener('click', function(e) {
             if (e.target === this) {
                 this.style.display = 'none';

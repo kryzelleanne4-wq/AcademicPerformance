@@ -1,7 +1,8 @@
 <?php
 /**
- * Attendance Recording Page
- * Teachers record attendance for their sections; admins can use any section.
+ * Attendance Page
+ * Teachers record attendance for their sections. Admins can view attendance
+ * records (any section) but cannot record or modify them.
  * The exported Excel file matches the on-screen record columns.
  */
 
@@ -11,6 +12,7 @@ requireRole('admin', 'instructor');
 $db = getDB();
 $user = currentUser();
 $instructor = currentInstructor();
+$canRecord = ($user['role'] === 'instructor');
 
 // Sections available to this user.
 if ($user['role'] === 'admin') {
@@ -42,6 +44,12 @@ $sectionId = intval($_GET['section_id'] ?? $_POST['section_id'] ?? 0);
 $date = sanitize($_GET['date'] ?? $_POST['date'] ?? date('Y-m-d'));
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'save') {
+    if (!$canRecord) {
+        setFlash('Admins can view attendance records but only teachers can record them.', 'error');
+        header('Location: attendance.php' . ($sectionId ? '?section_id=' . $sectionId : ''));
+        exit();
+    }
+
     $section_id = intval($_POST['section_id'] ?? 0);
     $attendance_date = sanitize($_POST['date'] ?? date('Y-m-d'));
     $statuses = (array) ($_POST['status'] ?? []);
@@ -137,7 +145,7 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2><?php echo icon('clipboard-check', 24); ?> Record Attendance</h2>
+            <h2><?php echo icon('clipboard-check', 24); ?> <?php echo $canRecord ? 'Record Attendance' : 'View Attendance'; ?></h2>
         </div>
         <div style="padding: 24px;">
             <form method="GET" class="form-row" style="align-items: flex-end;">
@@ -162,6 +170,13 @@ displayFlash();
             </form>
 
             <?php if ($sectionId && $roster): ?>
+            <?php if (!$canRecord): ?>
+            <div class="alert" style="background: var(--surface-low); margin-top: 24px;">
+                <?php echo icon('lock', 16); ?>
+                You are viewing attendance as an admin. Only teachers can record or modify attendance.
+            </div>
+            <?php endif; ?>
+            <?php if ($canRecord): ?>
             <form method="POST" style="margin-top: 24px;">
                 <input type="hidden" name="action" value="save">
                 <input type="hidden" name="section_id" value="<?php echo $sectionId; ?>">
@@ -203,6 +218,7 @@ displayFlash();
                     <button type="submit" class="btn btn-success">Save Attendance</button>
                 </div>
             </form>
+            <?php endif; ?>
             <?php elseif ($sectionId): ?>
                 <p style="margin-top: 24px; color: var(--ink-muted);">No enrolled students in this section.</p>
             <?php endif; ?>

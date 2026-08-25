@@ -1,7 +1,8 @@
 <?php
 /**
- * Grades Management Page
- * Teachers record grades for their sections; admins can use any section.
+ * Grades Page
+ * Teachers record grades for their sections. Admins can view all grade
+ * records but cannot record or modify them.
  * The exported Excel file matches the on-screen record columns.
  */
 
@@ -11,6 +12,7 @@ requireRole('admin', 'instructor');
 $db = getDB();
 $user = currentUser();
 $instructor = currentInstructor();
+$canRecord = ($user['role'] === 'instructor');
 
 // Sections available to this user (used to scope grading).
 if ($user['role'] === 'admin') {
@@ -61,6 +63,13 @@ foreach ($sections as $section) {
 // Handle form submissions
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    // Admins may only view grades; all write actions are teacher-only.
+    if (!$canRecord && in_array($action, ['add', 'delete'], true)) {
+        setFlash('Admins can view grades but only teachers can record them.', 'error');
+        header('Location: grades.php');
+        exit();
+    }
 
     switch ($action) {
         case 'add':
@@ -175,12 +184,21 @@ displayFlash();
 ?>
 
 <main>
+    <?php if (!$canRecord): ?>
+    <div class="alert" style="background: var(--surface-low);">
+        <?php echo icon('lock', 16); ?>
+        You are viewing grades as an admin. Only teachers can record or modify grades.
+    </div>
+    <?php endif; ?>
+
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h2><?php echo icon('pen-line', 24); ?> Grades List</h2>
             <div style="display: flex; gap: 8px;">
                 <a href="?export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
+                <?php if ($canRecord): ?>
                 <button class="btn btn-primary" onclick="document.getElementById('addGradeModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Grade</button>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -194,7 +212,9 @@ displayFlash();
                     <th>Year</th>
                     <th>Score</th>
                     <th>Grade</th>
+                    <?php if ($canRecord): ?>
                     <th>Actions</th>
+                    <?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -211,6 +231,7 @@ displayFlash();
                             <?php echo $grade['grade']; ?>
                         </span>
                     </td>
+                    <?php if ($canRecord): ?>
                     <td data-label="Actions">
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure?')">
                             <input type="hidden" name="action" value="delete">
@@ -218,6 +239,7 @@ displayFlash();
                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
                     </td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -225,6 +247,7 @@ displayFlash();
     </div>
 </main>
 
+<?php if ($canRecord): ?>
 <!-- Add Grade Modal -->
 <div id="addGradeModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
@@ -321,5 +344,6 @@ displayFlash();
         }
     });
 </script>
+<?php endif; ?>
 
 <?php include '../includes/footer.php'; ?>

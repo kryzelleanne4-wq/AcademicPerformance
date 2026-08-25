@@ -4,7 +4,7 @@ All users sign in at `login.php` with their **Login ID** and **Password**.
 
 | # | Login ID | Name | Role | Password | Can do |
 |---|----------|------|------|----------|--------|
-| 1 | `admin` | Administrator | Admin | `admin123` | Add users (students/instructors), departments, courses/subjects, schedules; enroll students; record attendance & grades; view reports |
+| 1 | `admin` | Administrator | Admin | `admin123` | Add users (students/instructors), departments, courses/subjects, schedules; enroll students; view attendance & grades (read-only) and reports |
 | 2 | `EMP-2026-0001` | Maria Santos | Teacher | `password123` | Record attendance & grades for her sections; view her subjects. **Cannot** add students or users |
 | 3 | `STU-2026-0001` | Juan Dela Cruz | Student | `password123` | View his own grades, attendance, subjects, and final grades. Enrolled in CS101 (Intro to Programming) with one grade (92 / A) and one attendance record |
 

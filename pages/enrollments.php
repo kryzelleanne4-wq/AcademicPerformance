@@ -42,6 +42,27 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             header('Location: enrollments.php');
             exit();
             break;
+
+        case 'update':
+            $id = intval($_POST['id'] ?? 0);
+            $status = sanitize($_POST['status'] ?? 'Enrolled');
+            $remarks = sanitize($_POST['remarks'] ?? '');
+
+            $validStatuses = ['Enrolled', 'Dropped', 'Completed', 'Withdrawn'];
+            if (!in_array($status, $validStatuses, true)) {
+                $status = 'Enrolled';
+            }
+
+            if (!$id) {
+                setFlash('Invalid enrollment.', 'error');
+            } else {
+                $stmt = $db->prepare("UPDATE enrollments SET status = :st, remarks = :r WHERE id = :id");
+                $stmt->execute([':st' => $status, ':r' => $remarks ?: null, ':id' => $id]);
+                setFlash('Enrollment updated to "' . $status . '".');
+            }
+            header('Location: enrollments.php');
+            exit();
+            break;
     }
 }
 
@@ -58,7 +79,7 @@ $sections = $db->query("
 $activeStudents = $db->query("SELECT * FROM students WHERE status = 'Active' ORDER BY last_name, first_name")->fetchAll();
 
 $enrollments = $db->query("
-    SELECT e.id, e.status, e.enrolled_at,
+    SELECT e.id, e.status, e.enrolled_at, e.remarks, e.final_score, e.final_grade,
            st.student_id, st.first_name, st.last_name,
            sub.subject_code, sub.subject_name, cs.section_code, cs.schedule,
            t.term_name, t.academic_year
@@ -110,6 +131,24 @@ displayFlash();
                     </td>
                     <td data-label="Enrolled At"><?php echo formatDate($enrollment['enrolled_at']); ?></td>
                     <td data-label="Actions">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                data-id="<?php echo $enrollment['id']; ?>"
+                                data-student="<?php echo htmlspecialchars($enrollment['student_id'] . ' - ' . $enrollment['first_name'] . ' ' . $enrollment['last_name'], ENT_QUOTES); ?>"
+                                data-subject="<?php echo htmlspecialchars($enrollment['subject_code'] . ' - ' . $enrollment['subject_name'], ENT_QUOTES); ?>"
+                                data-section="<?php echo htmlspecialchars($enrollment['section_code'], ENT_QUOTES); ?>"
+                                data-schedule="<?php echo htmlspecialchars($enrollment['schedule'] ?? '', ENT_QUOTES); ?>"
+                                data-term="<?php echo htmlspecialchars($enrollment['term_name'] . ' ' . $enrollment['academic_year'], ENT_QUOTES); ?>"
+                                data-status="<?php echo htmlspecialchars($enrollment['status'], ENT_QUOTES); ?>"
+                                data-remarks="<?php echo htmlspecialchars($enrollment['remarks'] ?? '', ENT_QUOTES); ?>"
+                                data-final-score="<?php echo $enrollment['final_score'] ?? ''; ?>"
+                                data-final-grade="<?php echo htmlspecialchars($enrollment['final_grade'] ?? '', ENT_QUOTES); ?>"
+                                data-enrolled-at="<?php echo htmlspecialchars($enrollment['enrolled_at'], ENT_QUOTES); ?>"
+                                onclick="viewEnrollment(this)">View</button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                data-id="<?php echo $enrollment['id']; ?>"
+                                data-status="<?php echo htmlspecialchars($enrollment['status'], ENT_QUOTES); ?>"
+                                data-remarks="<?php echo htmlspecialchars($enrollment['remarks'] ?? '', ENT_QUOTES); ?>"
+                                onclick="editEnrollment(this)">Edit</button>
                         <?php if ($enrollment['status'] === 'Enrolled'): ?>
                         <form method="POST" style="display: inline;" onsubmit="return confirm('Drop this enrollment?')">
                             <input type="hidden" name="action" value="drop">
@@ -164,11 +203,86 @@ displayFlash();
     </div>
 </div>
 
+<!-- View Enrollment Modal -->
+<div id="viewEnrollmentModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <h2><?php echo icon('clipboard-list', 20); ?> Enrollment Details</h2>
+        <div class="detail-list">
+            <div class="detail-row"><span class="detail-label">Student</span><span class="detail-value" id="viewEnrStudent"></span></div>
+            <div class="detail-row"><span class="detail-label">Subject</span><span class="detail-value" id="viewEnrSubject"></span></div>
+            <div class="detail-row"><span class="detail-label">Section</span><span class="detail-value" id="viewEnrSection"></span></div>
+            <div class="detail-row"><span class="detail-label">Schedule</span><span class="detail-value" id="viewEnrSchedule"></span></div>
+            <div class="detail-row"><span class="detail-label">Term</span><span class="detail-value" id="viewEnrTerm"></span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="viewEnrStatus"></span></div>
+            <div class="detail-row"><span class="detail-label">Final Score</span><span class="detail-value" id="viewEnrScore"></span></div>
+            <div class="detail-row"><span class="detail-label">Final Grade</span><span class="detail-value" id="viewEnrGrade"></span></div>
+            <div class="detail-row"><span class="detail-label">Remarks</span><span class="detail-value" id="viewEnrRemarks"></span></div>
+            <div class="detail-row"><span class="detail-label">Enrolled At</span><span class="detail-value" id="viewEnrDate"></span></div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('viewEnrollmentModal').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Enrollment Modal -->
+<div id="editEnrollmentModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <h2><?php echo icon('pen-line', 20); ?> Edit Enrollment</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="id" id="editEnrId">
+
+            <div class="form-group">
+                <label>Status</label>
+                <select name="status" id="editEnrStatus" class="form-control">
+                    <?php foreach (['Enrolled', 'Dropped', 'Completed', 'Withdrawn'] as $status): ?>
+                    <option value="<?php echo $status; ?>"><?php echo $status; ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Remarks</label>
+                <textarea name="remarks" id="editEnrRemarks" class="form-control" rows="3" placeholder="Optional notes"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-success">Save Changes</button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('editEnrollmentModal').style.display='none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
-    document.getElementById('enrollModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.style.display = 'none';
-        }
+    function viewEnrollment(btn) {
+        document.getElementById('viewEnrStudent').textContent = btn.dataset.student;
+        document.getElementById('viewEnrSubject').textContent = btn.dataset.subject;
+        document.getElementById('viewEnrSection').textContent = btn.dataset.section;
+        document.getElementById('viewEnrSchedule').textContent = btn.dataset.schedule || '—';
+        document.getElementById('viewEnrTerm').textContent = btn.dataset.term;
+        document.getElementById('viewEnrStatus').textContent = btn.dataset.status;
+        document.getElementById('viewEnrScore').textContent = btn.dataset.finalScore || '—';
+        document.getElementById('viewEnrGrade').textContent = btn.dataset.finalGrade || '—';
+        document.getElementById('viewEnrRemarks').textContent = btn.dataset.remarks || '—';
+        document.getElementById('viewEnrDate').textContent = new Date(btn.dataset.enrolledAt.replace(' ', 'T')).toLocaleString();
+        document.getElementById('viewEnrollmentModal').style.display = 'block';
+    }
+
+    function editEnrollment(btn) {
+        document.getElementById('editEnrId').value = btn.dataset.id;
+        document.getElementById('editEnrStatus').value = btn.dataset.status;
+        document.getElementById('editEnrRemarks').value = btn.dataset.remarks || '';
+        document.getElementById('editEnrollmentModal').style.display = 'block';
+    }
+
+    ['enrollModal', 'viewEnrollmentModal', 'editEnrollmentModal'].forEach(function(id) {
+        document.getElementById(id).addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+            }
+        });
     });
 </script>
 
