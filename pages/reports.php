@@ -1,9 +1,10 @@
 <?php
 /**
- * Reports Page
+ * Reports Page (Admin only)
  */
 
 require_once '../includes/functions.php';
+requireRole('admin');
 
 $db = getDB();
 

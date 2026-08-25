@@ -4,13 +4,24 @@
  */
 
 require_once '../includes/functions.php';
+requireLogin();
 
 $pageTitle = 'My Final Grades';
 
 $db = getDB();
+$user = currentUser();
+
+// Students only see their own summary.
+$where = '';
+$params = [];
+if ($user['role'] === 'student') {
+    $student = currentStudent();
+    $where = 'WHERE s.id = :sid';
+    $params[':sid'] = $student['id'];
+}
 
 // Get final grades summary
-$stmt = $db->query("
+$stmt = $db->prepare("
     SELECT 
         s.id,
         s.student_id as student_number,
@@ -29,10 +40,12 @@ $stmt = $db->query("
     FROM students s
     LEFT JOIN grades g ON s.id = g.student_id
     LEFT JOIN subjects sub ON g.subject_id = sub.id
+    $where
     GROUP BY s.id
     HAVING total_subjects > 0
     ORDER BY final_average DESC
 ");
+$stmt->execute($params);
 $finalGrades = $stmt->fetchAll();
 
 include '../includes/header.php';

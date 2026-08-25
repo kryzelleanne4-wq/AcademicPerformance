@@ -4,13 +4,24 @@
  */
 
 require_once '../includes/functions.php';
+requireLogin();
 
 $pageTitle = 'My Performance';
 
 $db = getDB();
+$user = currentUser();
+
+// Students only see their own performance summary.
+$where = '';
+$params = [];
+if ($user['role'] === 'student') {
+    $student = currentStudent();
+    $where = 'WHERE s.id = :sid';
+    $params[':sid'] = $student['id'];
+}
 
 // Get average grades per student
-$stmt = $db->query("
+$stmt = $db->prepare("
     SELECT 
         s.id,
         s.student_id as student_number,
@@ -27,9 +38,11 @@ $stmt = $db->query("
         END as average_grade
     FROM students s
     LEFT JOIN grades g ON s.id = g.student_id
+    $where
     GROUP BY s.id
     ORDER BY average_score DESC
 ");
+$stmt->execute($params);
 $studentPerformance = $stmt->fetchAll();
 
 include '../includes/header.php';

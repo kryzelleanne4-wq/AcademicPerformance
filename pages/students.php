@@ -1,10 +1,12 @@
 <?php
 /**
- * Students Management Page
- * Handle adding, editing, viewing students
+ * Students Management Page (Admin only)
+ * Handle adding, editing, viewing students.
+ * Student IDs are auto-generated (STU-YYYY-####) and double as the login ID.
  */
 
 require_once '../includes/functions.php';
+requireRole('admin');
 
 $db = getDB();
 $message = '';
@@ -14,33 +16,69 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'add':
-                $student_id = sanitize($_POST['student_id']);
                 $first_name = sanitize($_POST['first_name']);
                 $last_name = sanitize($_POST['last_name']);
                 $email = sanitize($_POST['email']);
                 $phone = sanitize($_POST['phone']);
                 $gender = sanitize($_POST['gender']);
                 
-                $stmt = $db->prepare("
-                    INSERT INTO students (student_id, first_name, last_name, email, phone, gender)
-                    VALUES (:student_id, :first_name, :last_name, :email, :phone, :gender)
-                ");
-                
                 try {
-                    $stmt->bindValue(':student_id', $student_id);
-                    $stmt->bindValue(':first_name', $first_name);
-                    $stmt->bindValue(':last_name', $last_name);
-                    $stmt->bindValue(':email', $email);
-                    $stmt->bindValue(':phone', $phone);
-                    $stmt->bindValue(':gender', $gender);
-                    $stmt->execute();
-                    
-                    setFlash('Student added successfully!');
+                    $db->beginTransaction();
+
+                    $student_id = generateStudentId($db);
+
+                    // Create the login account first.
+                    $stmt = $db->prepare("
+                        INSERT INTO users (username, password, full_name, email, role)
+                        VALUES (:username, :password, :full_name, :email, 'student')
+                    ");
+                    $stmt->execute([
+                        ':username'  => $student_id,
+                        ':password'  => password_hash(defaultPassword(), PASSWORD_DEFAULT),
+                        ':full_name' => $first_name . ' ' . $last_name,
+                        ':email'     => $email ?: null
+                    ]);
+                    $userId = (int) $db->lastInsertId();
+
+                    // Then the student record linked to that account.
+                    $stmt = $db->prepare("
+                        INSERT INTO students (user_id, student_id, first_name, last_name, email, phone, gender)
+                        VALUES (:user_id, :student_id, :first_name, :last_name, :email, :phone, :gender)
+                    ");
+                    $stmt->execute([
+                        ':user_id'    => $userId,
+                        ':student_id' => $student_id,
+                        ':first_name' => $first_name,
+                        ':last_name'  => $last_name,
+                        ':email'      => $email ?: null,
+                        ':phone'      => $phone ?: null,
+                        ':gender'     => $gender
+                    ]);
+
+                    $db->commit();
+
+                    setFlash('Student added. Login ID: <strong>' . $student_id . '</strong> &middot; Default password: <strong>' . defaultPassword() . '</strong>');
                     header('Location: students.php');
                     exit();
                 } catch (Exception $e) {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
                     $message = 'Error adding student: ' . $e->getMessage();
                 }
+                break;
+                
+            case 'toggle_status':
+                $id = intval($_POST['id']);
+                $status = sanitize($_POST['status']);
+                $allowed = ['Active', 'Inactive', 'Graduated', 'Suspended'];
+                if (in_array($status, $allowed, true)) {
+                    $stmt = $db->prepare("UPDATE students SET status = :status WHERE id = :id");
+                    $stmt->execute([':status' => $status, ':id' => $id]);
+                    setFlash('Student status updated.');
+                }
+                header('Location: students.php');
+                exit();
                 break;
                 
             case 'delete':
@@ -94,14 +132,26 @@ include '../includes/header.php';
                 <tbody>
                     <?php foreach ($students as $student): ?>
                     <tr>
-                        <td><?php echo $student['student_id']; ?></td>
-                        <td><?php echo $student['first_name'] . ' ' . $student['last_name']; ?></td>
-                        <td><?php echo $student['email']; ?></td>
-                        <td><?php echo $student['phone']; ?></td>
-                        <td><?php echo $student['gender']; ?></td>
-                        <td><?php echo $student['status']; ?></td>
+                        <td><code><?php echo htmlspecialchars($student['student_id']); ?></code></td>
+                        <td><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
+                        <td><?php echo htmlspecialchars($student['email'] ?? ''); ?></td>
+                        <td><?php echo htmlspecialchars($student['phone'] ?? ''); ?></td>
+                        <td><?php echo htmlspecialchars($student['gender'] ?? ''); ?></td>
                         <td>
-                            <a href="student_detail.php?id=<?php echo $student['id']; ?>" class="btn btn-primary btn-sm">View</a>
+                            <span class="attendance-badge status-<?php echo $student['status'] === 'Active' ? 'present' : 'absent'; ?>">
+                                <?php echo htmlspecialchars($student['status']); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <form method="POST" style="display: inline;">
+                                <input type="hidden" name="action" value="toggle_status">
+                                <input type="hidden" name="id" value="<?php echo $student['id']; ?>">
+                                <select name="status" class="form-control" style="display:inline-block;width:auto;min-height:32px;padding:4px 8px;" onchange="this.form.submit()">
+                                    <?php foreach (['Active', 'Inactive', 'Graduated', 'Suspended'] as $status): ?>
+                                    <option value="<?php echo $status; ?>" <?php echo $student['status'] === $status ? 'selected' : ''; ?>><?php echo $status; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
                             <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure?')">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?php echo $student['id']; ?>">
@@ -122,9 +172,9 @@ include '../includes/header.php';
             <form method="POST">
                 <input type="hidden" name="action" value="add">
                 
-                <div class="form-group">
-                    <label>Student ID</label>
-                    <input type="text" name="student_id" class="form-control" required>
+                <div class="alert" style="background: var(--surface-low);">
+                    The student ID is generated automatically and is used as the login ID.
+                    The default password is <strong><?php echo defaultPassword(); ?></strong>.
                 </div>
                 
                 <div class="form-group">

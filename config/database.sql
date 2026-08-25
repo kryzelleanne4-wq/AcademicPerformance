@@ -89,6 +89,9 @@ try {
 
     $db->exec("\n        CREATE TABLE IF NOT EXISTS enrollments (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            student_id INTEGER NOT NULL,\n            section_id INTEGER NOT NULL,\n            enrolled_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            status TEXT NOT NULL DEFAULT 'Enrolled' CHECK(status IN ('Enrolled', 'Dropped', 'Completed', 'Withdrawn')),\n            final_score REAL CHECK(final_score IS NULL OR final_score BETWEEN 0 AND 100),\n            final_grade TEXT,\n            remarks TEXT,\n            UNIQUE(student_id, section_id),\n            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,\n            FOREIGN KEY (section_id) REFERENCES course_sections(id) ON DELETE CASCADE\n        )\n    ");
 
+    // Attendance tracking per student per section per day.
+    $db->exec("\n        CREATE TABLE IF NOT EXISTS attendance (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            student_id INTEGER NOT NULL,\n            section_id INTEGER NOT NULL,\n            attendance_date DATE NOT NULL,\n            status TEXT NOT NULL DEFAULT 'Present' CHECK(status IN ('Present', 'Absent', 'Late', 'Excused')),\n            remarks TEXT,\n            recorded_by INTEGER,\n            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            UNIQUE(student_id, section_id, attendance_date),\n            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,\n            FOREIGN KEY (section_id) REFERENCES course_sections(id) ON DELETE CASCADE,\n            FOREIGN KEY (recorded_by) REFERENCES instructors(id) ON DELETE SET NULL\n        )\n    ");
+
     // grades remains the page-facing final-grade table. New records can point
     // to sections/enrollments while legacy records continue using semester/year.
     if (!tableExists($db, 'grades')) {
@@ -115,7 +118,9 @@ try {
         'CREATE INDEX IF NOT EXISTS idx_enrollments_section_status ON enrollments(section_id, status)',
         'CREATE INDEX IF NOT EXISTS idx_grades_student_term ON grades(student_id, year, semester)',
         'CREATE INDEX IF NOT EXISTS idx_grades_subject_term ON grades(subject_id, year, semester)',
-        'CREATE INDEX IF NOT EXISTS idx_grades_instructor ON grades(instructor_id)'
+        'CREATE INDEX IF NOT EXISTS idx_grades_instructor ON grades(instructor_id)',
+        'CREATE INDEX IF NOT EXISTS idx_attendance_section_date ON attendance(section_id, attendance_date)',
+        'CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON attendance(student_id, attendance_date)'
     ];
     foreach ($indexes as $indexSql) {
         $db->exec($indexSql);
