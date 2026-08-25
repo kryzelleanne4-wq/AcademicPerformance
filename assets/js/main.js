@@ -3,6 +3,17 @@
  * Common functionality for the application
  */
 
+// Toggle the sidebar on smaller screens.
+const menuToggle = document.querySelector('.menu-toggle');
+const sidebar = document.querySelector('.sidebar');
+
+if (menuToggle && sidebar) {
+    menuToggle.addEventListener('click', function() {
+        const isOpen = sidebar.classList.toggle('show');
+        menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+}
+
 // Confirm before delete actions
 document.querySelectorAll('.btn-danger').forEach(btn => {
     btn.addEventListener('click', function(e) {

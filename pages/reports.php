@@ -31,29 +31,12 @@ $stmt = $db->query("
 $studentGrades = $stmt->fetchAll();
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports - Student Performance</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="../index.php">📚 Student Performance</a>
-        </div>
-        <ul class="nav-links">
-            <li><a href="../index.php">Dashboard</a></li>
-            <li><a href="students.php">Students</a></li>
-            <li><a href="subjects.php">Subjects</a></li>
-            <li><a href="grades.php">Grades</a></li>
-            <li><a href="reports.php">Reports</a></li>
-        </ul>
-    </nav>
-    
-    <main class="container">
+<?php
+$pageTitle = 'Reports';
+include '../includes/header.php';
+?>
+
+<main>
         <div class="card">
             <div class="card-header">
                 <h2>📊 Student Performance Summary</h2>
@@ -78,7 +61,7 @@ $studentGrades = $stmt->fetchAll();
                         <td><?php echo $row['average_score'] ?? 'N/A'; ?></td>
                         <td>
                             <?php if ($row['average_grade']): ?>
-                            <span class="grade-badge" style="background: <?php echo getGradeColor($row['average_grade']); ?>">
+                            <span class="grade-badge grade-<?php echo strtolower($row['average_grade']); ?>">
                                 <?php echo $row['average_grade']; ?>
                             </span>
                             <?php else: ?>
@@ -91,7 +74,5 @@ $studentGrades = $stmt->fetchAll();
             </table>
         </div>
     </main>
-    
-    <?php include '../includes/footer.php'; ?>
-</body>
-</html>
+
+<?php include '../includes/footer.php'; ?>

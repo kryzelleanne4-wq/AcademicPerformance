@@ -8,7 +8,7 @@ require_once '../includes/functions.php';
 $db = getDB();
 
 // Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'add':
@@ -73,30 +73,12 @@ $gradesStmt = $db->query("
 $gradesList = $gradesStmt->fetchAll();
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grades - Student Performance</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="../index.php">📚 Student Performance</a>
-        </div>
-        <ul class="nav-links">
-            <li><a href="../index.php">Dashboard</a></li>
-            <li><a href="students.php">Students</a></li>
-            <li><a href="subjects.php">Subjects</a></li>
-            <li><a href="grades.php">Grades</a></li>
-            <li><a href="reports.php">Reports</a></li>
-        </ul>
-    </nav>
-    
-    <main class="container">
-        <?php displayFlash(); ?>
+<?php
+$pageTitle = 'Grades';
+include '../includes/header.php';
+?>
+
+<main>
         
         <div class="card">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -125,7 +107,7 @@ $gradesList = $gradesStmt->fetchAll();
                         <td><?php echo $grade['year']; ?></td>
                         <td><?php echo $grade['score']; ?></td>
                         <td>
-                            <span class="grade-badge" style="background: <?php echo getGradeColor($grade['grade']); ?>">
+                            <span class="grade-badge grade-<?php echo strtolower($grade['grade']); ?>">
                                 <?php echo $grade['grade']; ?>
                             </span>
                         </td>
@@ -133,7 +115,7 @@ $gradesList = $gradesStmt->fetchAll();
                             <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure?')">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?php echo $grade['id']; ?>">
-                                <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Delete</button>
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                             </form>
                         </td>
                     </tr>
@@ -210,5 +192,5 @@ $gradesList = $gradesStmt->fetchAll();
             }
         });
     </script>
-</body>
-</html>
+
+<?php include '../includes/footer.php'; ?>
