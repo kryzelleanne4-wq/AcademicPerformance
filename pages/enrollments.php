@@ -20,15 +20,59 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!$section_id || empty($student_ids)) {
                 setFlash('Select a section and at least one student.', 'error');
             } else {
-                $inserted = 0;
-                $stmt = $db->prepare("INSERT OR IGNORE INTO enrollments (student_id, section_id) VALUES (:sid, :sec)");
-                foreach ($student_ids as $student_id) {
-                    $stmt->execute([':sid' => $student_id, ':sec' => $section_id]);
-                    if ($stmt->rowCount() > 0) {
-                        $inserted++;
+                // Look up the subject for the selected section
+                $stmtSubject = $db->prepare("SELECT subject_id FROM course_sections WHERE id = :id");
+                $stmtSubject->execute([':id' => $section_id]);
+                $subjectId = (int) $stmtSubject->fetchColumn();
+
+                if (!$subjectId) {
+                    setFlash('Invalid section selected.', 'error');
+                } else {
+                    // Find all other sections for the same subject in the same term
+                    $stmtOtherSections = $db->prepare("SELECT id FROM course_sections WHERE subject_id = :sid AND id != :id");
+                    $stmtOtherSections->execute([':sid' => $subjectId, ':id' => $section_id]);
+                    $otherSectionIds = $stmtOtherSections->fetchAll(PDO::FETCH_COLUMN);
+
+                    $inserted = 0;
+                    $skipped = 0;
+                    $stmtEnroll = $db->prepare("INSERT OR IGNORE INTO enrollments (student_id, section_id) VALUES (:sid, :sec)");
+                    $stmtCheck = $db->prepare("SELECT id FROM enrollments WHERE student_id = :sid AND section_id = :sec");
+
+                    foreach ($student_ids as $student_id) {
+                        // Check if already enrolled in this exact section
+                        $stmtCheck->execute([':sid' => $student_id, ':sec' => $section_id]);
+                        if ($stmtCheck->fetch()) {
+                            $skipped++;
+                            continue;
+                        }
+
+                        // Check if enrolled in another section of the same subject
+                        $alreadyEnrolled = false;
+                        foreach ($otherSectionIds as $otherId) {
+                            $stmtCheck->execute([':sid' => $student_id, ':sec' => $otherId]);
+                            if ($stmtCheck->fetch()) {
+                                $alreadyEnrolled = true;
+                                break;
+                            }
+                        }
+
+                        if ($alreadyEnrolled) {
+                            $skipped++;
+                            continue;
+                        }
+
+                        $stmtEnroll->execute([':sid' => $student_id, ':sec' => $section_id]);
+                        if ($stmtEnroll->rowCount() > 0) {
+                            $inserted++;
+                        }
                     }
+
+                    $msg = $inserted . ' student(s) enrolled successfully!';
+                    if ($skipped > 0) {
+                        $msg .= ' (' . $skipped . ' skipped — already enrolled in this subject).';
+                    }
+                    setFlash($msg);
                 }
-                setFlash($inserted . ' student(s) enrolled successfully!');
             }
             header('Location: enrollments.php');
             exit();
