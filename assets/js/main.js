@@ -125,19 +125,44 @@ if (scoreSheet) {
     });
 }
 
-// Confirm before delete actions
+// SweetAlert2 confirmations for destructive actions.
 document.querySelectorAll('.btn-danger').forEach(btn => {
     btn.addEventListener('click', function(e) {
-        if (!confirm('Are you sure you want to delete this?')) {
-            e.preventDefault();
-        }
+        if (typeof Swal === 'undefined' || btn.dataset.confirmed === 'true') return;
+
+        e.preventDefault();
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ba1a1a',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        }).then(result => {
+            if (result.isConfirmed) {
+                btn.dataset.confirmed = 'true';
+                if (btn.form) btn.form.submit();
+                else if (btn.href) window.location.href = btn.href;
+            }
+        });
     });
 });
 
-// Auto-hide flash messages after 5 seconds
+// Display server-side flash messages as SweetAlert toasts.
 document.querySelectorAll('.alert').forEach(alert => {
-    setTimeout(() => {
-        alert.style.opacity = '0';
-        setTimeout(() => alert.remove(), 300);
-    }, 5000);
+    if (typeof Swal === 'undefined') return;
+
+    const isError = alert.classList.contains('alert-error');
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: isError ? 'error' : 'success',
+        title: alert.textContent.trim(),
+        showConfirmButton: false,
+        timer: 4500,
+        timerProgressBar: true
+    });
+    alert.remove();
 });

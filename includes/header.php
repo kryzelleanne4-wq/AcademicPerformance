@@ -23,6 +23,7 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle ?? 'Student Performance'; ?></title>
     <link rel="stylesheet" href="<?php echo $assetPrefix; ?>assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <!-- Sidebar -->

@@ -49,6 +49,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Academic Excellence System</title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="login-body">
     <div class="login-card">
@@ -58,7 +59,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         </div>
 
         <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="alert alert-error" role="alert"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <form method="POST" class="login-form">
@@ -80,5 +81,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         <p class="login-hint">New accounts are created by the administrator.<br>Default password is <code>password123</code>.</p>
     </div>
+    <script>
+        document.querySelectorAll('.alert-error').forEach(function (alert) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Sign in failed',
+                    text: alert.textContent.trim(),
+                    confirmButtonColor: '#ba1a1a'
+                });
+                alert.remove();
+            }
+        });
+    </script>
 </body>
 </html>
