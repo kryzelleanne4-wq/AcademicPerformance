@@ -61,6 +61,10 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
                     <span class="icon"><?php echo icon('book-open'); ?></span>
                     Courses / Subjects
                 </a>
+                <a href="<?php echo $assetPrefix; ?>pages/blocks.php" class="menu-item <?php echo $currentPage === 'blocks' ? 'active' : ''; ?>">
+                    <span class="icon"><?php echo icon('grid'); ?></span>
+                    Blocks
+                </a>
                 <a href="<?php echo $assetPrefix; ?>pages/schedules.php" class="menu-item <?php echo $currentPage === 'schedules' ? 'active' : ''; ?>">
                     <span class="icon"><?php echo icon('calendar'); ?></span>
                     Schedules

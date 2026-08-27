@@ -249,6 +249,24 @@ function defaultPassword() {
     return 'password123';
 }
 
+// Ordinal label for a year level (1 => '1st', 2 => '2nd', 3 => '3rd', 5 => '5th').
+function yearOrdinal($year) {
+    $year = (int) $year;
+    if ($year === 1) return '1st';
+    if ($year === 2) return '2nd';
+    if ($year === 3) return '3rd';
+    return $year . 'th';
+}
+
+// Display label for a class block, e.g. "BSIT - 1st Year - Block 1".
+// Falls back to the stored block_name when one is set.
+function blockLabel($departmentCode, $yearLevel, $blockCode, $blockName = null) {
+    if ($blockName !== null && $blockName !== '') {
+        return $blockName;
+    }
+    return $departmentCode . ' - ' . yearOrdinal($yearLevel) . ' Year - Block ' . $blockCode;
+}
+
 // Reorder DB rows into a plain list of values matching $keys order,
 // ready for exportExcel.
 function pickColumns(array $rows, array $keys) {
@@ -285,4 +303,253 @@ function exportExcel($filename, array $headers, array $rows) {
     }
     echo '</tbody></table>';
     exit();
+}
+
+// ── Schedule Conflict Detection ──────────────────────────────────────
+
+// Full day-name mapping (abbreviation => minutes-from-midnight for 00:00).
+const SCHEDULE_DAYS = [
+    'mon' => 0, 'monday'    => 0,
+    'tue' => 1, 'tuesday'   => 1,
+    'wed' => 2, 'wednesday' => 2,
+    'thu' => 3, 'thursday'  => 3,
+    'fri' => 4, 'friday'    => 4,
+    'sat' => 5, 'saturday'  => 5,
+    'sun' => 6, 'sunday'    => 6,
+];
+
+// Parse a time string (e.g. "8:00 AM", "13:30") into minutes from midnight.
+function parseTimeToMinutes($timeStr) {
+    $timeStr = trim($timeStr);
+    if ($timeStr === '') return null;
+
+    // Strip trailing AM/PM
+    $isPM = false;
+    $hasAmPm = false;
+    if (preg_match('/^(.+?)\s*(AM|PM)$/i', $timeStr, $m)) {
+        $timeStr = trim($m[1]);
+        $isPM = strtolower($m[2]) === 'pm';
+        $hasAmPm = true;
+    }
+
+    if (!preg_match('/^(\d{1,2})(?::(\d{2}))?$/', $timeStr, $m)) {
+        return null;
+    }
+
+    $hour = (int) $m[1];
+    $min  = isset($m[2]) ? (int) $m[2] : 0;
+
+    if ($hasAmPm) {
+        if ($isPM && $hour < 12) $hour += 12;
+        if (!$isPM && $hour === 12) $hour = 0;
+    }
+
+    return $hour * 60 + $min;
+}
+
+// Parse a schedule string like "Mon & Wed, 8:00 - 9:30 AM" into structured data.
+// Returns [days => [...], start_minutes => int, end_minutes => int, raw => string]
+// or null if the string cannot be parsed.
+function parseSchedule($schedule) {
+    $schedule = trim($schedule);
+    if ($schedule === '') return null;
+
+    // Try common patterns:
+    //   "Mon & Wed, 8:00 - 9:30 AM"
+    //   "Mon, Tue, Wed 8:00-9:30 AM"
+    //   "Monday - Friday, 8:00 AM - 12:00 PM"
+    //   "MWF 8:00-9:30"
+    //   "TTh 1:00-2:30 PM"
+
+    $normalized = strtolower($schedule);
+
+    // Expand common abbreviations
+    $normalized = str_replace(['&', ','], ' ', $normalized);
+    $normalized = preg_replace('/\s+/', ' ', $normalized);
+
+    // Extract time range: look for "HH:MM - HH:MM" or "HH:MM-HH:MM" with optional AM/PM
+    $timePattern = '/(\d{1,2}:?\d{0,2}\s*(?:AM|PM)?)\s*(?:-|to)\s*(\d{1,2}:?\d{0,2}\s*(?:AM|PM)?)/i';
+    if (!preg_match($timePattern, $normalized, $timeMatch)) {
+        return null;
+    }
+
+    $startMinutes = parseTimeToMinutes($timeMatch[1]);
+    $endMinutes   = parseTimeToMinutes($timeMatch[2]);
+    if ($startMinutes === null || $endMinutes === null) return null;
+    if ($endMinutes <= $startMinutes) return null;
+
+    // Extract day names from the part before the time
+    $dayPart = trim(substr($normalized, 0, strpos($normalized, $timeMatch[0])));
+
+    $days = [];
+    // Try full names first: "monday - friday" or "monday tuesday"
+    if (preg_match('/(\w+)\s*(?:-|through|to)\s*(\w+)/', $dayPart, $rangeM)) {
+        $startDay = $rangeM[1];
+        $endDay   = $rangeM[2];
+        if (isset(SCHEDULE_DAYS[$startDay]) && isset(SCHEDULE_DAYS[$endDay])) {
+            $s = SCHEDULE_DAYS[$startDay];
+            $e = SCHEDULE_DAYS[$endDay];
+            if ($s <= $e) {
+                for ($i = $s; $i <= $e; $i++) {
+                    $days[] = $i;
+                }
+            }
+        }
+    }
+
+    // Try single-letter/short patterns like "MWF" or "TTh"
+    if (empty($days) && preg_match('/^([mtwfs]{2,})$/i', $dayPart)) {
+        $letterMap = ['m' => 0, 't' => 1, 'w' => 2, 'h' => 3, 'f' => 4, 's' => 5];
+        // Handle "th" as Thursday (h)
+        $expanded = '';
+        $i = 0;
+        $len = strlen($dayPart);
+        while ($i < $len) {
+            if ($i + 1 < $len && substr($dayPart, $i, 2) === 'th') {
+                $expanded .= 'h';
+                $i += 2;
+            } else {
+                $expanded .= $dayPart[$i];
+                $i++;
+            }
+        }
+        $days = [];
+        foreach (str_split($expanded) as $ch) {
+            if (isset($letterMap[$ch])) {
+                $days[] = $letterMap[$ch];
+            }
+        }
+        $days = array_unique($days);
+        sort($days);
+    }
+
+    // Try individual day names separated by spaces
+    if (empty($days)) {
+        preg_match_all('/\b(mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i', $dayPart, $dayMatches);
+        foreach ($dayMatches[1] as $d) {
+            $d = strtolower($d);
+            if (isset(SCHEDULE_DAYS[$d])) {
+                $days[] = SCHEDULE_DAYS[$d];
+            }
+        }
+        $days = array_unique($days);
+        sort($days);
+    }
+
+    if (empty($days)) return null;
+
+    return [
+        'days'           => $days,
+        'start_minutes'  => $startMinutes,
+        'end_minutes'    => $endMinutes,
+        'raw'            => $schedule,
+    ];
+}
+
+// Check if two time ranges on the same day overlap.
+// Both ranges are [start, end) in minutes-from-midnight.
+function timesOverlap($start1, $end1, $start2, $end2) {
+    return $start1 < $end2 && $start2 < $end1;
+}
+
+// Check a proposed schedule against all existing course_sections for conflicts.
+// Returns an array of conflict descriptions, or an empty array if no conflicts.
+// $excludeId is the section ID to skip (for edits).
+function findScheduleConflicts(PDO $db, $termId, $schedule, $excludeId = null) {
+    $parsed = parseSchedule($schedule);
+    if (!$parsed) return [];
+
+    $conflicts = [];
+
+    // Get all active sections for the same term
+    $sql = "SELECT cs.id, cs.section_code, cs.schedule, cs.room,
+                   cs.instructor_id, cs.block_id,
+                   sub.subject_code, sub.subject_name,
+                   ins.first_name, ins.last_name
+            FROM course_sections cs
+            JOIN subjects sub ON cs.subject_id = sub.id
+            JOIN instructors ins ON cs.instructor_id = ins.id
+            WHERE cs.term_id = :term
+              AND cs.schedule IS NOT NULL AND cs.schedule != ''
+              AND cs.status NOT IN ('Cancelled', 'Completed')";
+    $params = [':term' => $termId];
+
+    if ($excludeId) {
+        $sql .= " AND cs.id != :exclude";
+        $params[':exclude'] = $excludeId;
+    }
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $existing = $stmt->fetchAll();
+
+    foreach ($existing as $row) {
+        $existingParsed = parseSchedule($row['schedule']);
+        if (!$existingParsed) continue;
+
+        // Check if any day overlaps
+        $commonDays = array_intersect($parsed['days'], $existingParsed['days']);
+        if (empty($commonDays)) continue;
+
+        // Check if time ranges overlap
+        if (!timesOverlap($parsed['start_minutes'], $parsed['end_minutes'],
+                          $existingParsed['start_minutes'], $existingParsed['end_minutes'])) {
+            continue;
+        }
+
+        // We have a conflict — determine the type
+        $sectionLabel = $row['subject_code'] . ' (' . $row['section_code'] . ')';
+        $dayNames = [];
+        $dayNameMap = [0=>'Mon',1=>'Tue',2=>'Wed',3=>'Thu',4=>'Fri',5=>'Sat',6=>'Sun'];
+        foreach ($commonDays as $d) { $dayNames[] = $dayNameMap[$d]; }
+        $dayStr = implode(', ', $dayNames);
+        $timeStr = formatMinutes($parsed['start_minutes']) . ' - ' . formatMinutes($parsed['end_minutes']);
+        $existingTimeStr = formatMinutes($existingParsed['start_minutes']) . ' - ' . formatMinutes($existingParsed['end_minutes']);
+
+        // Room conflict
+        if ($row['room'] && isset($_POST['room']) && $row['room'] === $_POST['room'] && $_POST['room'] !== '') {
+            $conflicts[] = [
+                'type'    => 'room',
+                'message' => 'Room "' . htmlspecialchars($_POST['room']) . '" is already booked by ' . $sectionLabel . ' (' . $row['first_name'] . ' ' . $row['last_name'] . ') on ' . $dayStr . ' ' . $existingTimeStr,
+            ];
+        }
+
+        // Instructor conflict
+        if ($row['instructor_id'] == ($_POST['instructor_id'] ?? 0)) {
+            $conflicts[] = [
+                'type'    => 'instructor',
+                'message' => 'Instructor ' . htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) . ' is already teaching ' . $sectionLabel . ' on ' . $dayStr . ' ' . $existingTimeStr,
+            ];
+        }
+
+        // Class block conflict
+        if ($row['block_id'] && $row['block_id'] == ($_POST['block_id'] ?? 0) && ($_POST['block_id'] ?? 0) > 0) {
+            $conflicts[] = [
+                'type'    => 'block',
+                'message' => 'Class block already has ' . $sectionLabel . ' scheduled on ' . $dayStr . ' ' . $existingTimeStr,
+            ];
+        }
+    }
+
+    return $conflicts;
+}
+
+// Format minutes-from-midnight to a readable time like "8:00 AM".
+function formatMinutes($minutes) {
+    $h = intdiv($minutes, 60);
+    $m = $minutes % 60;
+    $suffix = $h >= 12 ? 'PM' : 'AM';
+    $h12 = $h % 12;
+    if ($h12 === 0) $h12 = 12;
+    return $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $suffix;
+}
+
+// Get a human-readable label for the days in a parsed schedule.
+function scheduleDayLabel($days) {
+    $dayNames = [0=>'Mon',1=>'Tue',2=>'Wed',3=>'Thu',4=>'Fri',5=>'Sat',6=>'Sun'];
+    $names = [];
+    foreach ($days as $d) {
+        $names[] = $dayNames[$d] ?? '?';
+    }
+    return implode(', ', $names);
 }

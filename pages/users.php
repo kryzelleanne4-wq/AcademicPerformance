@@ -23,6 +23,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $gender = sanitize($_POST['gender'] ?? 'Male');
             $program_id = intval($_POST['program_id'] ?? 0);
             $year_level = intval($_POST['year_level'] ?? 0);
+            $block_id = intval($_POST['block_id'] ?? 0);
+            $student_type = ($_POST['student_type'] ?? 'Regular') === 'Irregular' ? 'Irregular' : 'Regular';
             $department_id = intval($_POST['department_id'] ?? 0);
             $title = sanitize($_POST['title'] ?? '');
 
@@ -44,7 +46,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $stmt->execute([':u' => $loginId, ':p' => $passwordHash, ':fn' => $full_name, ':e' => $email ?: null]);
                     $userId = (int) $db->lastInsertId();
 
-                    $stmt = $db->prepare("INSERT INTO students (user_id, student_id, first_name, last_name, email, gender, program_id, year_level) VALUES (:uid, :sid, :fn, :ln, :e, :g, :pid, :yl)");
+                    $stmt = $db->prepare("INSERT INTO students (user_id, student_id, first_name, last_name, email, gender, program_id, year_level, block_id, student_type) VALUES (:uid, :sid, :fn, :ln, :e, :g, :pid, :yl, :bid, :st)");
                     $stmt->execute([
                         ':uid' => $userId,
                         ':sid' => $loginId,
@@ -53,7 +55,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         ':e'   => $email ?: null,
                         ':g'   => $gender,
                         ':pid' => $program_id ?: null,
-                        ':yl'  => $year_level ?: null
+                        ':yl'  => $year_level ?: null,
+                        ':bid' => $block_id ?: null,
+                        ':st'  => $student_type
                     ]);
                 } else {
                     $loginId = generateEmployeeId($db);
@@ -119,6 +123,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 // Data for forms and lists
 $programs = $db->query("SELECT * FROM programs ORDER BY program_name")->fetchAll();
 $departments = $db->query("SELECT * FROM departments ORDER BY department_name")->fetchAll();
+$blocks = $db->query("
+    SELECT b.*, d.department_code, d.department_name
+    FROM blocks b
+    JOIN departments d ON b.department_id = d.id
+    WHERE b.is_active = 1
+    ORDER BY d.department_name, b.year_level, b.block_code
+")->fetchAll();
 
 $usersStmt = $db->query("
     SELECT u.*,
@@ -260,6 +271,26 @@ displayFlash();
                         </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select name="student_type" class="form-control">
+                            <option value="Regular">Regular</option>
+                            <option value="Irregular">Irregular</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Class Block</label>
+                        <select name="block_id" class="form-control">
+                            <option value="">-- No Block --</option>
+                            <?php foreach ($blocks as $block): ?>
+                            <option value="<?php echo $block['id']; ?>">
+                                <?php echo htmlspecialchars(blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name'])); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
             </div>
 

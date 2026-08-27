@@ -21,6 +21,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $email = sanitize($_POST['email']);
                 $phone = sanitize($_POST['phone']);
                 $gender = sanitize($_POST['gender']);
+                $block_id = intval($_POST['block_id'] ?? 0);
+                $student_type = ($_POST['student_type'] ?? 'Regular') === 'Irregular' ? 'Irregular' : 'Regular';
                 
                 try {
                     $db->beginTransaction();
@@ -42,17 +44,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
                     // Then the student record linked to that account.
                     $stmt = $db->prepare("
-                        INSERT INTO students (user_id, student_id, first_name, last_name, email, phone, gender)
-                        VALUES (:user_id, :student_id, :first_name, :last_name, :email, :phone, :gender)
+                        INSERT INTO students (user_id, student_id, first_name, last_name, email, phone, gender, block_id, student_type)
+                        VALUES (:user_id, :student_id, :first_name, :last_name, :email, :phone, :gender, :block_id, :student_type)
                     ");
                     $stmt->execute([
-                        ':user_id'    => $userId,
-                        ':student_id' => $student_id,
-                        ':first_name' => $first_name,
-                        ':last_name'  => $last_name,
-                        ':email'      => $email ?: null,
-                        ':phone'      => $phone ?: null,
-                        ':gender'     => $gender
+                        ':user_id'      => $userId,
+                        ':student_id'   => $student_id,
+                        ':first_name'   => $first_name,
+                        ':last_name'    => $last_name,
+                        ':email'        => $email ?: null,
+                        ':phone'        => $phone ?: null,
+                        ':gender'       => $gender,
+                        ':block_id'     => $block_id ?: null,
+                        ':student_type' => $student_type
                     ]);
 
                     $db->commit();
@@ -95,9 +99,24 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
+// Data for forms
+$blocks = $db->query("
+    SELECT b.*, d.department_code, d.department_name
+    FROM blocks b
+    JOIN departments d ON b.department_id = d.id
+    WHERE b.is_active = 1
+    ORDER BY d.department_name, b.year_level, b.block_code
+")->fetchAll();
+
 // Get all students
-$stmt = $db->query("SELECT * FROM students ORDER BY last_name, first_name");
-$students = $stmt->fetchAll();
+$students = $db->query("
+    SELECT st.*, d.department_code, b.year_level AS block_year_level,
+           b.block_code AS block_code, b.block_name AS block_name
+    FROM students st
+    LEFT JOIN blocks b ON st.block_id = b.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    ORDER BY st.last_name, st.first_name
+")->fetchAll();
 ?>
 
 <?php
@@ -122,6 +141,8 @@ include '../includes/header.php';
                     <tr>
                         <th>Student ID</th>
                         <th>Name</th>
+                        <th>Block</th>
+                        <th>Type</th>
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Gender</th>
@@ -134,6 +155,8 @@ include '../includes/header.php';
                     <tr>
                         <td data-label="Student ID"><code><?php echo htmlspecialchars($student['student_id']); ?></code></td>
                         <td data-label="Name"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
+                        <td data-label="Block"><?php echo htmlspecialchars($student['block_id'] ? blockLabel($student['department_code'], $student['block_year_level'], $student['block_code'], $student['block_name']) : '—'); ?></td>
+                        <td data-label="Type"><?php echo htmlspecialchars($student['student_type'] ?? 'Regular'); ?></td>
                         <td data-label="Email"><?php echo htmlspecialchars($student['email'] ?? ''); ?></td>
                         <td data-label="Phone"><?php echo htmlspecialchars($student['phone'] ?? ''); ?></td>
                         <td data-label="Gender"><?php echo htmlspecialchars($student['gender'] ?? ''); ?></td>
@@ -197,15 +220,36 @@ include '../includes/header.php';
                     <input type="text" name="phone" class="form-control">
                 </div>
                 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select name="gender" class="form-control">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select name="student_type" class="form-control">
+                            <option value="Regular">Regular</option>
+                            <option value="Irregular">Irregular</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label>Gender</label>
-                    <select name="gender" class="form-control">
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                    <label>Class Block</label>
+                    <select name="block_id" class="form-control">
+                        <option value="">-- No Block --</option>
+                        <?php foreach ($blocks as $block): ?>
+                        <option value="<?php echo $block['id']; ?>">
+                            <?php echo htmlspecialchars(blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name'])); ?>
+                        </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
-                
+
                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                     <button type="submit" class="btn btn-success">Save Student</button>
                     <button type="button" class="btn btn-danger" onclick="document.getElementById('addStudentModal').style.display='none'">Cancel</button>

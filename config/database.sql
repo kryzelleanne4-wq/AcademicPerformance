@@ -61,6 +61,11 @@ try {
 
     $db->exec("\n        CREATE TABLE IF NOT EXISTS academic_terms (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            term_code TEXT NOT NULL UNIQUE COLLATE NOCASE,\n            term_name TEXT NOT NULL,\n            academic_year TEXT NOT NULL,\n            start_date DATE NOT NULL,\n            end_date DATE NOT NULL,\n            is_current INTEGER NOT NULL DEFAULT 0 CHECK(is_current IN (0, 1)),\n            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            CHECK(end_date >= start_date)\n        )\n    ");
 
+    // Class blocks group students by department and year level
+    // (e.g. BSIT 1st Year - Block 1). Each block can hold many students
+    // (regular and irregular), many schedules, and many instructors/lessons.
+    $db->exec("\n        CREATE TABLE IF NOT EXISTS blocks (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            department_id INTEGER NOT NULL,\n            year_level INTEGER NOT NULL CHECK(year_level BETWEEN 1 AND 12),\n            block_code TEXT NOT NULL COLLATE NOCASE,\n            block_name TEXT,\n            is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),\n            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            UNIQUE(department_id, year_level, block_code),\n            FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT\n        )\n    ");
+
     // Existing student columns are preserved; these fields connect students
     // to login accounts and college programs.
     if (!tableExists($db, 'students')) {
@@ -72,6 +77,13 @@ try {
         addColumnIfMissing($db, 'students', 'expected_graduation_date', 'DATE');
         addColumnIfMissing($db, 'students', 'updated_at', 'DATETIME');
     }
+
+    // Every student belongs to a class block and is either regular or irregular.
+    addColumnIfMissing($db, 'students', 'block_id', 'INTEGER REFERENCES blocks(id) ON DELETE SET NULL');
+    addColumnIfMissing($db, 'students', 'student_type', "TEXT NOT NULL DEFAULT 'Regular' CHECK(student_type IN ('Regular', 'Irregular'))");
+
+    // A schedule/lesson belongs to a class block (a block can have many lessons).
+    addColumnIfMissing($db, 'course_sections', 'block_id', 'INTEGER REFERENCES blocks(id) ON DELETE SET NULL');
 
     $db->exec("\n        CREATE TABLE IF NOT EXISTS instructors (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            user_id INTEGER NOT NULL UNIQUE,\n            employee_id TEXT NOT NULL UNIQUE COLLATE NOCASE,\n            first_name TEXT NOT NULL,\n            last_name TEXT NOT NULL,\n            email TEXT UNIQUE COLLATE NOCASE,\n            phone TEXT,\n            department_id INTEGER,\n            title TEXT,\n            specialization TEXT,\n            status TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive', 'On Leave')),\n            hired_date DATE,\n            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n            FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL\n        )\n    ");
 
@@ -119,6 +131,9 @@ try {
     $indexes = [
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_students_user_id ON students(user_id) WHERE user_id IS NOT NULL',
         'CREATE INDEX IF NOT EXISTS idx_students_program_status ON students(program_id, status)',
+        'CREATE INDEX IF NOT EXISTS idx_students_block ON students(block_id)',
+        'CREATE INDEX IF NOT EXISTS idx_blocks_department ON blocks(department_id)',
+        'CREATE INDEX IF NOT EXISTS idx_sections_block ON course_sections(block_id)',
         'CREATE INDEX IF NOT EXISTS idx_instructors_department_status ON instructors(department_id, status)',
         'CREATE INDEX IF NOT EXISTS idx_subjects_department ON subjects(department_id)',
         'CREATE INDEX IF NOT EXISTS idx_sections_instructor_term ON course_sections(instructor_id, term_id)',

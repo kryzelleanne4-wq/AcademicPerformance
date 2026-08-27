@@ -55,6 +55,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $subject_id = intval($_POST['subject_id'] ?? 0);
             $instructor_id = intval($_POST['instructor_id'] ?? 0);
             $term_id = intval($_POST['term_id'] ?? 0);
+            $block_id = intval($_POST['block_id'] ?? 0);
             $block_code = sanitize($_POST['block_code'] ?? '');
             $room = sanitize($_POST['room'] ?? '');
             $schedule = sanitize($_POST['schedule'] ?? '');
@@ -63,20 +64,33 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!$subject_id || !$instructor_id || !$term_id || $block_code === '') {
                 setFlash('Subject, instructor, term and block are required.', 'error');
             } else {
-                try {
-                    $stmt = $db->prepare("INSERT INTO course_sections (subject_id, instructor_id, term_id, section_code, room, schedule, capacity) VALUES (:s, :i, :t, :c, :r, :sch, :cap)");
-                    $stmt->execute([
-                        ':s'   => $subject_id,
-                        ':i'   => $instructor_id,
-                        ':t'   => $term_id,
-                        ':c'   => $block_code,
-                        ':r'   => $room ?: null,
-                        ':sch' => $schedule ?: null,
-                        ':cap' => $capacity ?: null
-                    ]);
-                    setFlash('Schedule created successfully!');
-                } catch (Exception $e) {
-                    setFlash('Error creating schedule: ' . $e->getMessage(), 'error');
+                // Check for schedule conflicts
+                $conflicts = [];
+                if ($schedule) {
+                    $conflicts = findScheduleConflicts($db, $term_id, $schedule);
+                }
+
+                if (!empty($conflicts)) {
+                    $msgs = [];
+                    foreach ($conflicts as $c) { $msgs[] = $c['message']; }
+                    setFlash('Schedule conflict detected: ' . implode(' | ', $msgs), 'error');
+                } else {
+                    try {
+                        $stmt = $db->prepare("INSERT INTO course_sections (subject_id, instructor_id, term_id, block_id, section_code, room, schedule, capacity) VALUES (:s, :i, :t, :b, :c, :r, :sch, :cap)");
+                        $stmt->execute([
+                            ':s'   => $subject_id,
+                            ':i'   => $instructor_id,
+                            ':t'   => $term_id,
+                            ':b'   => $block_id ?: null,
+                            ':c'   => $block_code,
+                            ':r'   => $room ?: null,
+                            ':sch' => $schedule ?: null,
+                            ':cap' => $capacity ?: null
+                        ]);
+                        setFlash('Schedule created successfully!');
+                    } catch (Exception $e) {
+                        setFlash('Error creating schedule: ' . $e->getMessage(), 'error');
+                    }
                 }
             }
             header('Location: schedules.php');
@@ -88,6 +102,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $subject_id = intval($_POST['subject_id'] ?? 0);
             $instructor_id = intval($_POST['instructor_id'] ?? 0);
             $term_id = intval($_POST['term_id'] ?? 0);
+            $block_id = intval($_POST['block_id'] ?? 0);
             $block_code = sanitize($_POST['block_code'] ?? '');
             $room = sanitize($_POST['room'] ?? '');
             $schedule = sanitize($_POST['schedule'] ?? '');
@@ -102,22 +117,35 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!$id || !$subject_id || !$instructor_id || !$term_id || $block_code === '') {
                 setFlash('Subject, instructor, term and block are required.', 'error');
             } else {
-                try {
-                    $stmt = $db->prepare("UPDATE course_sections SET subject_id = :s, instructor_id = :i, term_id = :t, section_code = :c, room = :r, schedule = :sch, capacity = :cap, status = :st, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
-                    $stmt->execute([
-                        ':s'   => $subject_id,
-                        ':i'   => $instructor_id,
-                        ':t'   => $term_id,
-                        ':c'   => $block_code,
-                        ':r'   => $room ?: null,
-                        ':sch' => $schedule ?: null,
-                        ':cap' => $capacity ?: null,
-                        ':st'  => $status,
-                        ':id'  => $id
-                    ]);
-                    setFlash('Schedule updated successfully!');
-                } catch (Exception $e) {
-                    setFlash('Error updating schedule: ' . $e->getMessage(), 'error');
+                // Check for schedule conflicts (exclude self)
+                $conflicts = [];
+                if ($schedule) {
+                    $conflicts = findScheduleConflicts($db, $term_id, $schedule, $id);
+                }
+
+                if (!empty($conflicts)) {
+                    $msgs = [];
+                    foreach ($conflicts as $c) { $msgs[] = $c['message']; }
+                    setFlash('Schedule conflict detected: ' . implode(' | ', $msgs), 'error');
+                } else {
+                    try {
+                        $stmt = $db->prepare("UPDATE course_sections SET subject_id = :s, instructor_id = :i, term_id = :t, block_id = :b, section_code = :c, room = :r, schedule = :sch, capacity = :cap, status = :st, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
+                        $stmt->execute([
+                            ':s'   => $subject_id,
+                            ':i'   => $instructor_id,
+                            ':t'   => $term_id,
+                            ':b'   => $block_id ?: null,
+                            ':c'   => $block_code,
+                            ':r'   => $room ?: null,
+                            ':sch' => $schedule ?: null,
+                            ':cap' => $capacity ?: null,
+                            ':st'  => $status,
+                            ':id'  => $id
+                        ]);
+                        setFlash('Schedule updated successfully!');
+                    } catch (Exception $e) {
+                        setFlash('Error updating schedule: ' . $e->getMessage(), 'error');
+                    }
                 }
             }
             header('Location: schedules.php');
@@ -141,15 +169,25 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 $terms = $db->query("SELECT * FROM academic_terms ORDER BY is_current DESC, start_date DESC")->fetchAll();
 $subjects = $db->query("SELECT * FROM subjects WHERE is_active = 1 ORDER BY subject_code")->fetchAll();
 $instructors = $db->query("SELECT * FROM instructors WHERE status = 'Active' ORDER BY last_name")->fetchAll();
+$blocks = $db->query("
+    SELECT b.*, d.department_code, d.department_name
+    FROM blocks b
+    JOIN departments d ON b.department_id = d.id
+    WHERE b.is_active = 1
+    ORDER BY d.department_name, b.year_level, b.block_code
+")->fetchAll();
 
 $sections = $db->query("
     SELECT cs.*, sub.subject_code, sub.subject_name, ins.first_name, ins.last_name,
            t.term_name, t.academic_year,
-           (SELECT COUNT(*) FROM enrollments e WHERE e.block_id = cs.id AND e.status = 'Enrolled') AS enrolled_count
+           d.department_code, b.year_level AS block_year_level, b.block_code AS block_code,
+           (SELECT COUNT(*) FROM enrollments e WHERE e.section_id = cs.id AND e.status = 'Enrolled') AS enrolled_count
     FROM course_sections cs
     JOIN subjects sub ON cs.subject_id = sub.id
     JOIN instructors ins ON cs.instructor_id = ins.id
     JOIN academic_terms t ON cs.term_id = t.id
+    LEFT JOIN blocks b ON cs.block_id = b.id
+    LEFT JOIN departments d ON b.department_id = d.id
     ORDER BY t.is_current DESC, sub.subject_code, cs.section_code
 ")->fetchAll();
 
@@ -172,13 +210,13 @@ displayFlash();
             <thead>
                 <tr>
                     <th>Block</th>
+                    <th>Class Block</th>
                     <th>Subject</th>
                     <th>Instructor</th>
                     <th>Term</th>
                     <th>Schedule</th>
                     <th>Room</th>
                     <th>Capacity</th>
-                    <th>Enrolled</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -186,14 +224,47 @@ displayFlash();
             <tbody>
                 <?php foreach ($sections as $section): ?>
                 <tr>
-                    <td data-label="Block"><code><?php echo htmlspecialchars($section['block_code']); ?></code></td>
+                    <td data-label="Block"><code><?php echo htmlspecialchars($section['section_code']); ?></code></td>
+                    <td data-label="Class Block"><?php echo htmlspecialchars($section['block_id'] ? blockLabel($section['department_code'], $section['block_year_level'], $section['block_code']) : '—'); ?></td>
                     <td data-label="Subject"><?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name']); ?></td>
                     <td data-label="Instructor"><?php echo htmlspecialchars($section['first_name'] . ' ' . $section['last_name']); ?></td>
                     <td data-label="Term"><?php echo htmlspecialchars($section['term_name'] . ' ' . $section['academic_year']); ?></td>
                     <td data-label="Schedule"><?php echo htmlspecialchars($section['schedule'] ?? '—'); ?></td>
                     <td data-label="Room"><?php echo htmlspecialchars($section['room'] ?? '—'); ?></td>
-                    <td data-label="Capacity"><?php echo $section['capacity'] ?: '—'; ?></td>
-                    <td data-label="Enrolled"><?php echo $section['enrolled_count']; ?></td>
+                    <td data-label="Capacity">
+                        <?php if ($section['capacity']): ?>
+                        <?php
+                            $cap = (int) $section['capacity'];
+                            $enrolled = (int) $section['enrolled_count'];
+                            $pct = $cap > 0 ? min(($enrolled / $cap) * 100, 100) : 0;
+                            $remaining = max($cap - $enrolled, 0);
+                            if ($pct >= 100) {
+                                $capClass = 'cap-full';
+                                $capLabel = 'Full';
+                            } elseif ($pct >= 80) {
+                                $capClass = 'cap-warning';
+                                $capLabel = 'Almost Full';
+                            } elseif ($pct >= 50) {
+                                $capClass = 'cap-moderate';
+                                $capLabel = $remaining . ' left';
+                            } else {
+                                $capClass = 'cap-ok';
+                                $capLabel = $remaining . ' left';
+                            }
+                        ?>
+                        <div class="capacity-cell">
+                            <div class="capacity-numbers">
+                                <strong><?php echo $enrolled; ?></strong> / <?php echo $cap; ?>
+                                <span class="capacity-badge <?php echo $capClass; ?>"><?php echo $capLabel; ?></span>
+                            </div>
+                            <div class="capacity-progress">
+                                <div class="capacity-progress-fill <?php echo $capClass; ?>" style="width: <?php echo $pct; ?>%;"></div>
+                            </div>
+                        </div>
+                        <?php else: ?>
+                        <span style="color: var(--ink-muted);"><?php echo $section['enrolled_count']; ?> enrolled (no limit)</span>
+                        <?php endif; ?>
+                    </td>
                     <td data-label="Status">
                         <span class="attendance-badge status-<?php echo $section['status'] === 'Open' ? 'present' : 'absent'; ?>">
                             <?php echo htmlspecialchars($section['status']); ?>
@@ -202,7 +273,8 @@ displayFlash();
                     <td data-label="Actions">
                         <button type="button" class="btn btn-secondary btn-sm"
                                 data-id="<?php echo $section['id']; ?>"
-                                data-block-code="<?php echo htmlspecialchars($section['block_code'], ENT_QUOTES); ?>"
+                                data-block-code="<?php echo htmlspecialchars($section['section_code'], ENT_QUOTES); ?>"
+                                data-class-block="<?php echo htmlspecialchars($section['block_id'] ? blockLabel($section['department_code'], $section['block_year_level'], $section['block_code']) : '', ENT_QUOTES); ?>"
                                 data-subject="<?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name'], ENT_QUOTES); ?>"
                                 data-instructor="<?php echo htmlspecialchars($section['first_name'] . ' ' . $section['last_name'], ENT_QUOTES); ?>"
                                 data-term="<?php echo htmlspecialchars($section['term_name'] . ' ' . $section['academic_year'], ENT_QUOTES); ?>"
@@ -217,7 +289,8 @@ displayFlash();
                                 data-subject-id="<?php echo (int) $section['subject_id']; ?>"
                                 data-instructor-id="<?php echo (int) $section['instructor_id']; ?>"
                                 data-term-id="<?php echo (int) $section['term_id']; ?>"
-                                data-block-code="<?php echo htmlspecialchars($section['block_code'], ENT_QUOTES); ?>"
+                                data-block-id="<?php echo (int) $section['block_id']; ?>"
+                                data-block-code="<?php echo htmlspecialchars($section['section_code'], ENT_QUOTES); ?>"
                                 data-room="<?php echo htmlspecialchars($section['room'] ?? '', ENT_QUOTES); ?>"
                                 data-schedule="<?php echo htmlspecialchars($section['schedule'] ?? '', ENT_QUOTES); ?>"
                                 data-capacity="<?php echo $section['capacity'] ?: ''; ?>"
@@ -285,6 +358,18 @@ displayFlash();
                 </div>
             </div>
 
+            <div class="form-group">
+                <label>Class Block</label>
+                <select name="block_id" class="form-control">
+                    <option value="">-- No Class Block --</option>
+                    <?php foreach ($blocks as $block): ?>
+                    <option value="<?php echo $block['id']; ?>">
+                        <?php echo htmlspecialchars(blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name'])); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Schedule (Days / Time)</label>
@@ -312,9 +397,9 @@ displayFlash();
 <!-- View Block Modal -->
 <div id="viewBlockModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
-        <h2><?php echo icon('calendar', 20); ?> Block Details</h2>
-        <div class="detail-list">
+        <h2><?php echo icon('calendar', 20); ?> Block Details</h2>            <div class="detail-list">
             <div class="detail-row"><span class="detail-label">Block</span><span class="detail-value" id="viewBlockCode"></span></div>
+            <div class="detail-row"><span class="detail-label">Class Block</span><span class="detail-value" id="viewSecClassBlock"></span></div>
             <div class="detail-row"><span class="detail-label">Subject</span><span class="detail-value" id="viewSecSubject"></span></div>
             <div class="detail-row"><span class="detail-label">Instructor</span><span class="detail-value" id="viewSecInstructor"></span></div>
             <div class="detail-row"><span class="detail-label">Term</span><span class="detail-value" id="viewSecTerm"></span></div>
@@ -322,6 +407,7 @@ displayFlash();
             <div class="detail-row"><span class="detail-label">Room</span><span class="detail-value" id="viewSecRoom"></span></div>
             <div class="detail-row"><span class="detail-label">Capacity</span><span class="detail-value" id="viewSecCapacity"></span></div>
             <div class="detail-row"><span class="detail-label">Enrolled</span><span class="detail-value" id="viewSecEnrolled"></span></div>
+            <div class="detail-row"><span class="detail-label">Availability</span><span class="detail-value" id="viewSecAvail"></span></div>
             <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="viewSecStatus"></span></div>
         </div>
         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -376,6 +462,18 @@ displayFlash();
                         <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label>Class Block</label>
+                <select name="block_id" id="editSecBlock" class="form-control">
+                    <option value="">-- No Class Block --</option>
+                    <?php foreach ($blocks as $block): ?>
+                    <option value="<?php echo $block['id']; ?>">
+                        <?php echo htmlspecialchars(blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name'])); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <div class="form-row">
@@ -459,14 +557,34 @@ displayFlash();
 <script>
     function viewBlock(btn) {
         document.getElementById('viewBlockCode').textContent = btn.dataset.blockCode;
+        document.getElementById('viewSecClassBlock').textContent = btn.dataset.classBlock || '—';
         document.getElementById('viewSecSubject').textContent = btn.dataset.subject;
         document.getElementById('viewSecInstructor').textContent = btn.dataset.instructor;
         document.getElementById('viewSecTerm').textContent = btn.dataset.term;
         document.getElementById('viewSecSchedule').textContent = btn.dataset.schedule || '—';
         document.getElementById('viewSecRoom').textContent = btn.dataset.room || '—';
-        document.getElementById('viewSecCapacity').textContent = btn.dataset.capacity || '—';
-        document.getElementById('viewSecEnrolled').textContent = btn.dataset.enrolled;
-        document.getElementById('viewSecStatus').textContent = btn.dataset.status;
+        var cap = parseInt(btn.dataset.capacity) || 0;
+        var enrolled = parseInt(btn.dataset.enrolled) || 0;
+        document.getElementById('viewSecCapacity').textContent = cap ? cap : '—';
+        document.getElementById('viewSecEnrolled').textContent = enrolled;
+
+        // Build availability indicator
+        var availEl = document.getElementById('viewSecAvail');
+        if (cap > 0) {
+            var pct = Math.min((enrolled / cap) * 100, 100);
+            var remaining = Math.max(cap - enrolled, 0);
+            var cls = pct >= 100 ? 'cap-full' : (pct >= 80 ? 'cap-warning' : (pct >= 50 ? 'cap-moderate' : 'cap-ok'));
+            var label = pct >= 100 ? 'FULL — No more slots' : (pct >= 80 ? 'Almost full — ' + remaining + ' slot' + (remaining !== 1 ? 's' : '') + ' left' : remaining + ' of ' + cap + ' slots available');
+            availEl.innerHTML = '<div class="capacity-view">' +
+                '<span class="capacity-badge ' + cls + '" style="margin-bottom:4px">' + label + '</span>' +
+                '<div class="capacity-progress">' +
+                    '<div class="capacity-progress-fill ' + cls + '" style="width:' + pct + '%"></div>' +
+                '</div>' +
+            '</div>';
+        } else {
+            availEl.textContent = 'No capacity limit set';
+        }
+
         document.getElementById('viewBlockModal').style.display = 'block';
     }
 
@@ -475,6 +593,7 @@ displayFlash();
         document.getElementById('editSecSubject').value = btn.dataset.subjectId;
         document.getElementById('editSecInstructor').value = btn.dataset.instructorId;
         document.getElementById('editSecTerm').value = btn.dataset.termId;
+        document.getElementById('editSecBlock').value = btn.dataset.blockId || '';
         document.getElementById('editBlockCode').value = btn.dataset.blockCode;
         document.getElementById('editSecRoom').value = btn.dataset.room || '';
         document.getElementById('editSecSchedule').value = btn.dataset.schedule || '';
