@@ -135,8 +135,16 @@ include '../includes/header.php';
             <?php if ($message): ?>
                 <div class="alert alert-error"><?php echo $message; ?></div>
             <?php endif; ?>
-            
-            <table data-pagination data-page-size="8">
+
+            <div class="table-search-bar">
+                <div class="table-search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="studentSearch" placeholder="Search by name, ID, email, block...">
+                </div>
+                <span class="search-count"></span>
+            </div>
+
+            <table data-pagination data-page-size="8" id="studentTable">
                 <thead>
                     <tr>
                         <th>Student ID</th>
@@ -152,7 +160,7 @@ include '../includes/header.php';
                 </thead>
                 <tbody>
                     <?php foreach ($students as $student): ?>
-                    <tr>
+                    <tr data-search="<?php echo htmlspecialchars(strtolower($student['student_id'] . ' ' . $student['first_name'] . ' ' . $student['last_name'] . ' ' . ($student['email'] ?? '') . ' ' . ($student['block_code'] ?? '') . ' ' . ($student['department_code'] ?? ''))); ?>">
                         <td data-label="Student ID"><code><?php echo htmlspecialchars($student['student_id']); ?></code></td>
                         <td data-label="Name"><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
                         <td data-label="Block"><?php echo htmlspecialchars($student['block_id'] ? blockLabel($student['department_code'], $student['block_year_level'], $student['block_code'], $student['block_name']) : '—'); ?></td>
@@ -265,6 +273,7 @@ include '../includes/header.php';
                 this.style.display = 'none';
             }
         });
+        initTableSearch('studentSearch', 'studentTable');
     </script>
 
 <?php include '../includes/footer.php'; ?>

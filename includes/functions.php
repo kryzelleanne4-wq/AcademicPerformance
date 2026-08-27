@@ -354,12 +354,34 @@ function parseSchedule($schedule) {
     $schedule = trim($schedule);
     if ($schedule === '') return null;
 
-    // Try common patterns:
-    //   "Mon & Wed, 8:00 - 9:30 AM"
-    //   "Mon, Tue, Wed 8:00-9:30 AM"
-    //   "Monday - Friday, 8:00 AM - 12:00 PM"
-    //   "MWF 8:00-9:30"
-    //   "TTh 1:00-2:30 PM"
+    // Handle multi-session schedules separated by ";"
+    if (strpos($schedule, ';') !== false) {
+        $sessions = [];
+        $parts = array_map('trim', explode(';', $schedule));
+        foreach ($parts as $part) {
+            if ($part === '') continue;
+            $parsed = parseSingleScheduleSession($part);
+            if ($parsed) {
+                $sessions[] = $parsed;
+            }
+        }
+        if (empty($sessions)) return null;
+        // Return the first session's data for backward compatibility,
+        // but also include all sessions in a 'sessions' key
+        $first = $sessions[0];
+        $first['sessions'] = $sessions;
+        return $first;
+    }
+
+    return parseSingleScheduleSession($schedule);
+}
+
+// Parse a single schedule session string (e.g. "Mon & Wed, 8:00 - 9:30 AM").
+// Returns [days => [...], start_minutes => int, end_minutes => int, raw => string]
+// or null if the string cannot be parsed.
+function parseSingleScheduleSession($schedule) {
+    $schedule = trim($schedule);
+    if ($schedule === '') return null;
 
     $normalized = strtolower($schedule);
 
@@ -367,7 +389,7 @@ function parseSchedule($schedule) {
     $normalized = str_replace(['&', ','], ' ', $normalized);
     $normalized = preg_replace('/\s+/', ' ', $normalized);
 
-    // Extract time range: look for "HH:MM - HH:MM" or "HH:MM-HH:MM" with optional AM/PM
+    // Extract time range
     $timePattern = '/(\d{1,2}:?\d{0,2}\s*(?:AM|PM)?)\s*(?:-|to)\s*(\d{1,2}:?\d{0,2}\s*(?:AM|PM)?)/i';
     if (!preg_match($timePattern, $normalized, $timeMatch)) {
         return null;
@@ -382,7 +404,7 @@ function parseSchedule($schedule) {
     $dayPart = trim(substr($normalized, 0, strpos($normalized, $timeMatch[0])));
 
     $days = [];
-    // Try full names first: "monday - friday" or "monday tuesday"
+    // Try full names first
     if (preg_match('/(\w+)\s*(?:-|through|to)\s*(\w+)/', $dayPart, $rangeM)) {
         $startDay = $rangeM[1];
         $endDay   = $rangeM[2];
@@ -400,7 +422,6 @@ function parseSchedule($schedule) {
     // Try single-letter/short patterns like "MWF" or "TTh"
     if (empty($days) && preg_match('/^([mtwfs]{2,})$/i', $dayPart)) {
         $letterMap = ['m' => 0, 't' => 1, 'w' => 2, 'h' => 3, 'f' => 4, 's' => 5];
-        // Handle "th" as Thursday (h)
         $expanded = '';
         $i = 0;
         $len = strlen($dayPart);
@@ -459,6 +480,9 @@ function findScheduleConflicts(PDO $db, $termId, $schedule, $excludeId = null) {
     $parsed = parseSchedule($schedule);
     if (!$parsed) return [];
 
+    // Get all sessions to check (handles multi-session schedules)
+    $sessionsToCheck = isset($parsed['sessions']) ? $parsed['sessions'] : [$parsed];
+
     $conflicts = [];
 
     // Get all active sections for the same term
@@ -483,51 +507,59 @@ function findScheduleConflicts(PDO $db, $termId, $schedule, $excludeId = null) {
     $stmt->execute($params);
     $existing = $stmt->fetchAll();
 
+    $dayNameMap = [0=>'Mon',1=>'Tue',2=>'Wed',3=>'Thu',4=>'Fri',5=>'Sat',6=>'Sun'];
+
     foreach ($existing as $row) {
         $existingParsed = parseSchedule($row['schedule']);
         if (!$existingParsed) continue;
 
-        // Check if any day overlaps
-        $commonDays = array_intersect($parsed['days'], $existingParsed['days']);
-        if (empty($commonDays)) continue;
+        // Get all sessions from the existing schedule
+        $existingSessions = isset($existingParsed['sessions']) ? $existingParsed['sessions'] : [$existingParsed];
 
-        // Check if time ranges overlap
-        if (!timesOverlap($parsed['start_minutes'], $parsed['end_minutes'],
-                          $existingParsed['start_minutes'], $existingParsed['end_minutes'])) {
-            continue;
-        }
+        // Check each of our sessions against each existing session
+        foreach ($sessionsToCheck as $mySession) {
+            foreach ($existingSessions as $theirSession) {
+                // Check if any day overlaps
+                $commonDays = array_intersect($mySession['days'], $theirSession['days']);
+                if (empty($commonDays)) continue;
 
-        // We have a conflict — determine the type
-        $sectionLabel = $row['subject_code'] . ' (' . $row['section_code'] . ')';
-        $dayNames = [];
-        $dayNameMap = [0=>'Mon',1=>'Tue',2=>'Wed',3=>'Thu',4=>'Fri',5=>'Sat',6=>'Sun'];
-        foreach ($commonDays as $d) { $dayNames[] = $dayNameMap[$d]; }
-        $dayStr = implode(', ', $dayNames);
-        $timeStr = formatMinutes($parsed['start_minutes']) . ' - ' . formatMinutes($parsed['end_minutes']);
-        $existingTimeStr = formatMinutes($existingParsed['start_minutes']) . ' - ' . formatMinutes($existingParsed['end_minutes']);
+                // Check if time ranges overlap
+                if (!timesOverlap($mySession['start_minutes'], $mySession['end_minutes'],
+                                  $theirSession['start_minutes'], $theirSession['end_minutes'])) {
+                    continue;
+                }
 
-        // Room conflict
-        if ($row['room'] && isset($_POST['room']) && $row['room'] === $_POST['room'] && $_POST['room'] !== '') {
-            $conflicts[] = [
-                'type'    => 'room',
-                'message' => 'Room "' . htmlspecialchars($_POST['room']) . '" is already booked by ' . $sectionLabel . ' (' . $row['first_name'] . ' ' . $row['last_name'] . ') on ' . $dayStr . ' ' . $existingTimeStr,
-            ];
-        }
+                // We have a conflict
+                $sectionLabel = $row['subject_code'] . ' (' . $row['section_code'] . ')';
+                $dayNames = [];
+                foreach ($commonDays as $d) { $dayNames[] = $dayNameMap[$d]; }
+                $dayStr = implode(', ', $dayNames);
+                $existingTimeStr = formatMinutes($theirSession['start_minutes']) . ' - ' . formatMinutes($theirSession['end_minutes']);
 
-        // Instructor conflict
-        if ($row['instructor_id'] == ($_POST['instructor_id'] ?? 0)) {
-            $conflicts[] = [
-                'type'    => 'instructor',
-                'message' => 'Instructor ' . htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) . ' is already teaching ' . $sectionLabel . ' on ' . $dayStr . ' ' . $existingTimeStr,
-            ];
-        }
+                // Room conflict
+                if ($row['room'] && isset($_POST['room']) && $row['room'] === $_POST['room'] && $_POST['room'] !== '') {
+                    $conflicts[] = [
+                        'type'    => 'room',
+                        'message' => 'Room "' . htmlspecialchars($_POST['room']) . '" is already booked by ' . $sectionLabel . ' (' . $row['first_name'] . ' ' . $row['last_name'] . ') on ' . $dayStr . ' ' . $existingTimeStr,
+                    ];
+                }
 
-        // Class block conflict
-        if ($row['block_id'] && $row['block_id'] == ($_POST['block_id'] ?? 0) && ($_POST['block_id'] ?? 0) > 0) {
-            $conflicts[] = [
-                'type'    => 'block',
-                'message' => 'Class block already has ' . $sectionLabel . ' scheduled on ' . $dayStr . ' ' . $existingTimeStr,
-            ];
+                // Instructor conflict
+                if ($row['instructor_id'] == ($_POST['instructor_id'] ?? 0)) {
+                    $conflicts[] = [
+                        'type'    => 'instructor',
+                        'message' => 'Instructor ' . htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) . ' is already teaching ' . $sectionLabel . ' on ' . $dayStr . ' ' . $existingTimeStr,
+                    ];
+                }
+
+                // Class block conflict
+                if ($row['block_id'] && $row['block_id'] == ($_POST['block_id'] ?? 0) && ($_POST['block_id'] ?? 0) > 0) {
+                    $conflicts[] = [
+                        'type'    => 'block',
+                        'message' => 'Class block already has ' . $sectionLabel . ' scheduled on ' . $dayStr . ' ' . $existingTimeStr,
+                    ];
+                }
+            }
         }
     }
 

@@ -166,3 +166,54 @@ document.querySelectorAll('.alert').forEach(alert => {
     });
     alert.remove();
 });
+
+// ========================================
+// Reusable Table Search
+// ========================================
+/**
+ * Initialize a search bar that filters table rows.
+ * @param {string} inputId - The search input element ID
+ * @param {string} tableId - The table element ID
+ */
+function initTableSearch(inputId, tableId) {
+    var input = document.getElementById(inputId);
+    var table = document.getElementById(tableId);
+    if (!input || !table) return;
+
+    var tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    var countEl = input.closest('.table-search-bar') ? input.closest('.table-search-bar').querySelector('.search-count') : null;
+
+    // Pre-compute search text for each row
+    var rowSearchData = rows.map(function(row) {
+        var searchText = row.dataset.search || '';
+        if (!searchText) {
+            var cells = row.querySelectorAll('td');
+            cells.forEach(function(cell) {
+                searchText += ' ' + cell.textContent;
+            });
+        }
+        return searchText.toLowerCase();
+    });
+
+    input.addEventListener('input', function() {
+        var query = input.value.toLowerCase().trim();
+        var visible = 0;
+
+        rows.forEach(function(row, i) {
+            var match = !query || rowSearchData[i].indexOf(query) !== -1;
+            // Use both hidden attribute and style to work with pagination
+            row.dataset.searchHidden = match ? '0' : '1';
+            if (match) visible++;
+        });
+
+        if (countEl) {
+            countEl.textContent = visible + ' of ' + rows.length;
+        }
+
+        // Trigger a custom event so the page can react if needed
+        input.dispatchEvent(new Event('tablesearch', { bubbles: true }));
+    });
+}

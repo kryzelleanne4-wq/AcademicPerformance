@@ -206,7 +206,15 @@ displayFlash();
             </div>
         </div>
 
-        <table data-pagination data-page-size="8">
+        <div class="table-search-bar">
+            <div class="table-search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="scheduleSearch" placeholder="Search by subject, instructor, block, room...">
+            </div>
+            <span class="search-count"></span>
+        </div>
+
+        <table data-pagination data-page-size="8" id="scheduleTable">
             <thead>
                 <tr>
                     <th>Block</th>
@@ -223,7 +231,7 @@ displayFlash();
             </thead>
             <tbody>
                 <?php foreach ($sections as $section): ?>
-                <tr>
+                <tr data-search="<?php echo htmlspecialchars(strtolower($section['section_code'] . ' ' . $section['subject_code'] . ' ' . $section['subject_name'] . ' ' . $section['first_name'] . ' ' . $section['last_name'] . ' ' . ($section['block_code'] ?? '') . ' ' . ($section['schedule'] ?? '') . ' ' . ($section['room'] ?? ''))); ?>">
                     <td data-label="Block"><code><?php echo htmlspecialchars($section['section_code']); ?></code></td>
                     <td data-label="Class Block"><?php echo htmlspecialchars($section['block_id'] ? blockLabel($section['department_code'], $section['block_year_level'], $section['block_code']) : '—'); ?></td>
                     <td data-label="Subject"><?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name']); ?></td>
@@ -374,69 +382,79 @@ displayFlash();
             <!-- Schedule Picker -->
             <div class="schedule-picker" id="addSchedulePicker">
                 <label class="schedule-picker-label">Schedule</label>
-                <span class="schedule-picker-hint">Select the days and time range for this class.</span>
+                <span class="schedule-picker-hint">Add one or more class sessions. Each session has its own days and time.</span>
 
-                <!-- Quick shortcuts -->
-                <div class="day-shortcuts">
-                    <button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, 'add')">MWF</button>
-                    <button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, 'add')">TTh</button>
-                    <button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, 'add')">Mon-Fri</button>
-                    <button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, 'add')">Saturday</button>
-                </div>
+                <div id="addSessions">
+                    <!-- Session 1 -->
+                    <div class="schedule-session" data-session="0">
+                        <div class="schedule-session-header">
+                            <span class="schedule-session-number">Session 1</span>
+                        </div>
 
-                <!-- Day chips -->
-                <div class="day-chips" id="addDayChips">
-                    <button type="button" class="day-chip" data-day="0" onclick="toggleDay(this, 'add')">Mon</button>
-                    <button type="button" class="day-chip" data-day="1" onclick="toggleDay(this, 'add')">Tue</button>
-                    <button type="button" class="day-chip" data-day="2" onclick="toggleDay(this, 'add')">Wed</button>
-                    <button type="button" class="day-chip" data-day="3" onclick="toggleDay(this, 'add')">Thu</button>
-                    <button type="button" class="day-chip" data-day="4" onclick="toggleDay(this, 'add')">Fri</button>
-                    <button type="button" class="day-chip" data-day="5" onclick="toggleDay(this, 'add')">Sat</button>
-                </div>
-                <div class="day-chips-error" id="addDayError">Please select at least one day.</div>
+                        <div class="day-shortcuts">
+                            <button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, 0, 'add')">MWF</button>
+                            <button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, 0, 'add')">TTh</button>
+                            <button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, 0, 'add')">Mon-Fri</button>
+                            <button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, 0, 'add')">Saturday</button>
+                        </div>
 
-                <!-- Time range -->
-                <div class="schedule-time-row">
-                    <div class="time-select">
-                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>
-                        <select class="form-control" id="addStartTime" onchange="updateSchedulePreview('add')">
-                            <?php
-                            for ($h = 6; $h <= 21; $h++) {
-                                foreach ([0, 30] as $m) {
-                                    if ($h === 21 && $m > 0) break;
-                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
-                                    $h12 = $h % 12 ?: 12;
-                                    $ampm = $h < 12 ? 'AM' : 'PM';
-                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
-                                    echo '<option value="' . $val . '">' . $label . '</option>';
-                                }
-                            }
-                            ?>
-                        </select>
+                        <div class="day-chips" data-session-days="0">
+                            <button type="button" class="day-chip" data-day="0" onclick="toggleDay(this, 0, 'add')">Mon</button>
+                            <button type="button" class="day-chip" data-day="1" onclick="toggleDay(this, 0, 'add')">Tue</button>
+                            <button type="button" class="day-chip" data-day="2" onclick="toggleDay(this, 0, 'add')">Wed</button>
+                            <button type="button" class="day-chip" data-day="3" onclick="toggleDay(this, 0, 'add')">Thu</button>
+                            <button type="button" class="day-chip" data-day="4" onclick="toggleDay(this, 0, 'add')">Fri</button>
+                            <button type="button" class="day-chip" data-day="5" onclick="toggleDay(this, 0, 'add')">Sat</button>
+                        </div>
+                        <div class="day-chips-error" data-session-day-error="0">Please select at least one day.</div>
+
+                        <div class="schedule-time-row">
+                            <div class="time-select">
+                                <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>
+                                <select class="form-control" data-session-start="0" onchange="updateSchedulePreview('add')">
+                                    <?php
+                                    for ($h = 6; $h <= 21; $h++) {
+                                        foreach ([0, 30] as $m) {
+                                            if ($h === 21 && $m > 0) break;
+                                            $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                            $h12 = $h % 12 ?: 12;
+                                            $ampm = $h < 12 ? 'AM' : 'PM';
+                                            $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                            echo '<option value="' . $val . '">' . $label . '</option>';
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <span class="time-separator">to</span>
+                            <div class="time-select">
+                                <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>
+                                <select class="form-control" data-session-end="0" onchange="updateSchedulePreview('add')">
+                                    <?php
+                                    for ($h = 6; $h <= 21; $h++) {
+                                        foreach ([0, 30] as $m) {
+                                            if ($h === 21 && $m > 0) break;
+                                            $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                            $h12 = $h % 12 ?: 12;
+                                            $ampm = $h < 12 ? 'AM' : 'PM';
+                                            $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                            echo '<option value="' . $val . '"' . ($h === 9 && $m === 30 ? ' selected' : '') . '>' . $label . '</option>';
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="time-validation" data-session-time-error="0">End time must be after start time.</div>
                     </div>
-                    <span class="time-separator">to</span>
-                    <div class="time-select">
-                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>
-                        <select class="form-control" id="addEndTime" onchange="updateSchedulePreview('add')">
-                            <?php
-                            for ($h = 6; $h <= 21; $h++) {
-                                foreach ([0, 30] as $m) {
-                                    if ($h === 21 && $m > 0) break;
-                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
-                                    $h12 = $h % 12 ?: 12;
-                                    $ampm = $h < 12 ? 'AM' : 'PM';
-                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
-                                    echo '<option value="' . $val . '"' . ($h === 9 && $m === 30 ? ' selected' : '') . '>' . $label . '</option>';
-                                }
-                            }
-                            ?>
-                        </select>
-                    </div>
                 </div>
-                <div class="time-validation" id="addTimeValidation">End time must be after start time.</div>
+
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addSession('add')" style="margin-top: 8px;">
+                    <?php echo icon('plus', 14); ?> Add Another Session
+                </button>
 
                 <!-- Preview -->
-                <div class="schedule-preview">
+                <div class="schedule-preview" style="margin-top: 12px;">
                     <span class="schedule-preview-label">Generated:</span>
                     <span class="schedule-preview-value empty" id="addSchedulePreview">Select days and time above</span>
                 </div>
@@ -557,69 +575,79 @@ displayFlash();
             <!-- Schedule Picker -->
             <div class="schedule-picker" id="editSchedulePicker">
                 <label class="schedule-picker-label">Schedule</label>
-                <span class="schedule-picker-hint">Select the days and time range for this class.</span>
+                <span class="schedule-picker-hint">Add one or more class sessions. Each session has its own days and time.</span>
 
-                <!-- Quick shortcuts -->
-                <div class="day-shortcuts">
-                    <button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, 'edit')">MWF</button>
-                    <button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, 'edit')">TTh</button>
-                    <button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, 'edit')">Mon-Fri</button>
-                    <button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, 'edit')">Saturday</button>
-                </div>
+                <div id="editSessions">
+                    <!-- Session 1 -->
+                    <div class="schedule-session" data-session="0">
+                        <div class="schedule-session-header">
+                            <span class="schedule-session-number">Session 1</span>
+                        </div>
 
-                <!-- Day chips -->
-                <div class="day-chips" id="editDayChips">
-                    <button type="button" class="day-chip" data-day="0" onclick="toggleDay(this, 'edit')">Mon</button>
-                    <button type="button" class="day-chip" data-day="1" onclick="toggleDay(this, 'edit')">Tue</button>
-                    <button type="button" class="day-chip" data-day="2" onclick="toggleDay(this, 'edit')">Wed</button>
-                    <button type="button" class="day-chip" data-day="3" onclick="toggleDay(this, 'edit')">Thu</button>
-                    <button type="button" class="day-chip" data-day="4" onclick="toggleDay(this, 'edit')">Fri</button>
-                    <button type="button" class="day-chip" data-day="5" onclick="toggleDay(this, 'edit')">Sat</button>
-                </div>
-                <div class="day-chips-error" id="editDayError">Please select at least one day.</div>
+                        <div class="day-shortcuts">
+                            <button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, 0, 'edit')">MWF</button>
+                            <button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, 0, 'edit')">TTh</button>
+                            <button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, 0, 'edit')">Mon-Fri</button>
+                            <button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, 0, 'edit')">Saturday</button>
+                        </div>
 
-                <!-- Time range -->
-                <div class="schedule-time-row">
-                    <div class="time-select">
-                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>
-                        <select class="form-control" id="editStartTime" onchange="updateSchedulePreview('edit')">
-                            <?php
-                            for ($h = 6; $h <= 21; $h++) {
-                                foreach ([0, 30] as $m) {
-                                    if ($h === 21 && $m > 0) break;
-                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
-                                    $h12 = $h % 12 ?: 12;
-                                    $ampm = $h < 12 ? 'AM' : 'PM';
-                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
-                                    echo '<option value="' . $val . '">' . $label . '</option>';
-                                }
-                            }
-                            ?>
-                        </select>
+                        <div class="day-chips" data-session-days="0">
+                            <button type="button" class="day-chip" data-day="0" onclick="toggleDay(this, 0, 'edit')">Mon</button>
+                            <button type="button" class="day-chip" data-day="1" onclick="toggleDay(this, 0, 'edit')">Tue</button>
+                            <button type="button" class="day-chip" data-day="2" onclick="toggleDay(this, 0, 'edit')">Wed</button>
+                            <button type="button" class="day-chip" data-day="3" onclick="toggleDay(this, 0, 'edit')">Thu</button>
+                            <button type="button" class="day-chip" data-day="4" onclick="toggleDay(this, 0, 'edit')">Fri</button>
+                            <button type="button" class="day-chip" data-day="5" onclick="toggleDay(this, 0, 'edit')">Sat</button>
+                        </div>
+                        <div class="day-chips-error" data-session-day-error="0">Please select at least one day.</div>
+
+                        <div class="schedule-time-row">
+                            <div class="time-select">
+                                <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>
+                                <select class="form-control" data-session-start="0" onchange="updateSchedulePreview('edit')">
+                                    <?php
+                                    for ($h = 6; $h <= 21; $h++) {
+                                        foreach ([0, 30] as $m) {
+                                            if ($h === 21 && $m > 0) break;
+                                            $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                            $h12 = $h % 12 ?: 12;
+                                            $ampm = $h < 12 ? 'AM' : 'PM';
+                                            $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                            echo '<option value="' . $val . '">' . $label . '</option>';
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <span class="time-separator">to</span>
+                            <div class="time-select">
+                                <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>
+                                <select class="form-control" data-session-end="0" onchange="updateSchedulePreview('edit')">
+                                    <?php
+                                    for ($h = 6; $h <= 21; $h++) {
+                                        foreach ([0, 30] as $m) {
+                                            if ($h === 21 && $m > 0) break;
+                                            $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                            $h12 = $h % 12 ?: 12;
+                                            $ampm = $h < 12 ? 'AM' : 'PM';
+                                            $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                            echo '<option value="' . $val . '">' . $label . '</option>';
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="time-validation" data-session-time-error="0">End time must be after start time.</div>
                     </div>
-                    <span class="time-separator">to</span>
-                    <div class="time-select">
-                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>
-                        <select class="form-control" id="editEndTime" onchange="updateSchedulePreview('edit')">
-                            <?php
-                            for ($h = 6; $h <= 21; $h++) {
-                                foreach ([0, 30] as $m) {
-                                    if ($h === 21 && $m > 0) break;
-                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
-                                    $h12 = $h % 12 ?: 12;
-                                    $ampm = $h < 12 ? 'AM' : 'PM';
-                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
-                                    echo '<option value="' . $val . '">' . $label . '</option>';
-                                }
-                            }
-                            ?>
-                        </select>
-                    </div>
                 </div>
-                <div class="time-validation" id="editTimeValidation">End time must be after start time.</div>
+
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addSession('edit')" style="margin-top: 8px;">
+                    <?php echo icon('plus', 14); ?> Add Another Session
+                </button>
 
                 <!-- Preview -->
-                <div class="schedule-preview">
+                <div class="schedule-preview" style="margin-top: 12px;">
                     <span class="schedule-preview-label">Generated:</span>
                     <span class="schedule-preview-value empty" id="editSchedulePreview">Select days and time above</span>
                 </div>
@@ -712,37 +740,52 @@ displayFlash();
 
 <script>
     // =====================================================
-    // Schedule Picker: Day selection, time range, preview
+    // Multi-Session Schedule Picker
     // =====================================================
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const DAY_LETTERS = ['M', 'T', 'W', 'Th', 'F', 'S'];
     const conflictTimers = {};
+    var sessionCounters = { add: 1, edit: 1 };
+
+    /** Get the sessions container element for a prefix. */
+    function getSessionsContainer(prefix) {
+        return document.getElementById(prefix + 'Sessions');
+    }
+
+    /** Get all session elements in a container. */
+    function getSessions(prefix) {
+        return getSessionsContainer(prefix).querySelectorAll('.schedule-session');
+    }
 
     /** Toggle a day chip on/off and refresh the preview. */
-    function toggleDay(chip, prefix) {
+    function toggleDay(chip, sessionIdx, prefix) {
         chip.classList.toggle('selected');
-        document.getElementById(prefix + 'DayError').classList.remove('visible');
+        var errEl = document.querySelector('[data-session-day-error="' + sessionIdx + '"]');
+        if (errEl) errEl.classList.remove('visible');
         updateSchedulePreview(prefix);
     }
 
     /** Apply a day shortcut (MWF, TTh, etc.). */
-    function setDayShortcut(btn, prefix) {
+    function setDayShortcut(btn, sessionIdx, prefix) {
         var days = btn.dataset.days.split(',').map(Number);
-        var chips = document.getElementById(prefix + 'DayChips').querySelectorAll('.day-chip');
-        chips.forEach(function(chip) {
+        var container = document.querySelector('[data-session-days="' + sessionIdx + '"]');
+        if (!container) return;
+        container.querySelectorAll('.day-chip').forEach(function(chip) {
             if (days.indexOf(parseInt(chip.dataset.day)) !== -1) {
                 chip.classList.add('selected');
             } else {
                 chip.classList.remove('selected');
             }
         });
-        document.getElementById(prefix + 'DayError').classList.remove('visible');
+        var errEl = document.querySelector('[data-session-day-error="' + sessionIdx + '"]');
+        if (errEl) errEl.classList.remove('visible');
         updateSchedulePreview(prefix);
     }
 
-    /** Get selected day values from chips. */
-    function getSelectedDays(prefix) {
-        var chips = document.getElementById(prefix + 'DayChips').querySelectorAll('.day-chip.selected');
+    /** Get selected day values from a specific session's chips. */
+    function getSelectedDaysForSession(sessionIdx) {
+        var container = document.querySelector('[data-session-days="' + sessionIdx + '"]');
+        if (!container) return [];
+        var chips = container.querySelectorAll('.day-chip.selected');
         var days = [];
         chips.forEach(function(c) { days.push(parseInt(c.dataset.day)); });
         return days.sort(function(a, b) { return a - b; });
@@ -759,41 +802,46 @@ displayFlash();
         return h12 + ':' + m + ' ' + suffix;
     }
 
-    /** Build the schedule string from the picker state and update the preview. */
+    /** Build the schedule string from all sessions and update the preview. */
     function updateSchedulePreview(prefix) {
-        var days = getSelectedDays(prefix);
-        var startEl = document.getElementById(prefix + 'StartTime');
-        var endEl = document.getElementById(prefix + 'EndTime');
+        var sessions = getSessions(prefix);
         var previewEl = document.getElementById(prefix + 'SchedulePreview');
         var hiddenEl = document.getElementById(prefix + 'ScheduleHidden');
-        var timeValEl = document.getElementById(prefix + 'TimeValidation');
-        var startTime = startEl.value;
-        var endTime = endEl.value;
+        var scheduleParts = [];
 
-        // Validate time
-        if (startTime && endTime && startTime >= endTime) {
-            timeValEl.classList.add('visible');
+        sessions.forEach(function(session, idx) {
+            var days = getSelectedDaysForSession(idx);
+            var startEl = session.querySelector('[data-session-start="' + idx + '"]');
+            var endEl = session.querySelector('[data-session-end="' + idx + '"]');
+            var timeValEl = session.querySelector('[data-session-time-error="' + idx + '"]');
+            var startTime = startEl ? startEl.value : '08:00';
+            var endTime = endEl ? endEl.value : '09:30';
+
+            // Validate time for this session
+            if (startTime >= endTime) {
+                if (timeValEl) timeValEl.classList.add('visible');
+            } else {
+                if (timeValEl) timeValEl.classList.remove('visible');
+            }
+
+            if (days.length > 0) {
+                var dayStr = formatDayString(days);
+                var timeStr = formatTime12(startTime) + ' - ' + formatTime12(endTime);
+                scheduleParts.push(dayStr + ', ' + timeStr);
+            }
+        });
+
+        var schedule = scheduleParts.join(' ; ');
+
+        if (schedule) {
+            previewEl.textContent = schedule;
+            previewEl.classList.remove('empty');
         } else {
-            timeValEl.classList.remove('visible');
-        }
-
-        if (days.length === 0) {
             previewEl.textContent = 'Select days and time above';
             previewEl.classList.add('empty');
-            hiddenEl.value = '';
-            return;
         }
-
-        // Format days string: consecutive ranges shown as ranges
-        var dayStr = formatDayString(days);
-        var timeStr = formatTime12(startTime) + ' - ' + formatTime12(endTime);
-        var schedule = dayStr + ', ' + timeStr;
-
-        previewEl.textContent = schedule;
-        previewEl.classList.remove('empty');
         hiddenEl.value = schedule;
 
-        // Trigger conflict check
         debounceConflictCheck(prefix);
     }
 
@@ -801,8 +849,6 @@ displayFlash();
     function formatDayString(days) {
         if (days.length === 0) return '';
         if (days.length === 1) return DAY_NAMES[days[0]];
-
-        // Group consecutive days into ranges
         var ranges = [];
         var start = days[0];
         var end = days[0];
@@ -817,6 +863,90 @@ displayFlash();
         }
         ranges.push(start === end ? DAY_NAMES[start] : DAY_NAMES[start] + '-' + DAY_NAMES[end]);
         return ranges.join(', ');
+    }
+
+    /** Add a new session row to the picker. */
+    function addSession(prefix) {
+        var idx = sessionCounters[prefix]++;
+        var container = getSessionsContainer(prefix);
+        var html = '<div class="schedule-session" data-session="' + idx + '">' +
+            '<div class="schedule-session-header">' +
+                '<span class="schedule-session-number">Session ' + (idx + 1) + '</span>' +
+                '<button type="button" class="btn btn-danger btn-sm session-remove-btn" onclick="removeSession(this, ' + idx + ', \'' + prefix + '\')">Remove</button>' +
+            '</div>' +
+
+            '<div class="day-shortcuts">' +
+                '<button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, ' + idx + ', \'' + prefix + '\')">MWF</button>' +
+                '<button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, ' + idx + ', \'' + prefix + '\')">TTh</button>' +
+                '<button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, ' + idx + ', \'' + prefix + '\')">Mon-Fri</button>' +
+                '<button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, ' + idx + ', \'' + prefix + '\')">Saturday</button>' +
+            '</div>' +
+
+            '<div class="day-chips" data-session-days="' + idx + '">' +
+                '<button type="button" class="day-chip" data-day="0" onclick="toggleDay(this, ' + idx + ', \'' + prefix + '\')">Mon</button>' +
+                '<button type="button" class="day-chip" data-day="1" onclick="toggleDay(this, ' + idx + ', \'' + prefix + '\')">Tue</button>' +
+                '<button type="button" class="day-chip" data-day="2" onclick="toggleDay(this, ' + idx + ', \'' + prefix + '\')">Wed</button>' +
+                '<button type="button" class="day-chip" data-day="3" onclick="toggleDay(this, ' + idx + ', \'' + prefix + '\')">Thu</button>' +
+                '<button type="button" class="day-chip" data-day="4" onclick="toggleDay(this, ' + idx + ', \'' + prefix + '\')">Fri</button>' +
+                '<button type="button" class="day-chip" data-day="5" onclick="toggleDay(this, ' + idx + ', \'' + prefix + '\')">Sat</button>' +
+            '</div>' +
+            '<div class="day-chips-error" data-session-day-error="' + idx + '">Please select at least one day.</div>' +
+
+            '<div class="schedule-time-row">' +
+                '<div class="time-select">' +
+                    '<label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>' +
+                    '<select class="form-control" data-session-start="' + idx + '" onchange="updateSchedulePreview(\'' + prefix + '\')">' +
+                        getTimeOptions('08:00') +
+                    '</select>' +
+                '</div>' +
+                '<span class="time-separator">to</span>' +
+                '<div class="time-select">' +
+                    '<label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>' +
+                    '<select class="form-control" data-session-end="' + idx + '" onchange="updateSchedulePreview(\'' + prefix + '\')">' +
+                        getTimeOptions('09:30') +
+                    '</select>' +
+                '</div>' +
+            '</div>' +
+            '<div class="time-validation" data-session-time-error="' + idx + '">End time must be after start time.</div>' +
+        '</div>';
+
+        container.insertAdjacentHTML('beforeend', html);
+        updateSchedulePreview(prefix);
+    }
+
+    /** Remove a session row. */
+    function removeSession(btn, sessionIdx, prefix) {
+        var session = btn.closest('.schedule-session');
+        if (session) {
+            session.remove();
+            renumberSessions(prefix);
+            updateSchedulePreview(prefix);
+        }
+    }
+
+    /** Renumber session labels after removal. */
+    function renumberSessions(prefix) {
+        var sessions = getSessions(prefix);
+        sessions.forEach(function(s, i) {
+            var numEl = s.querySelector('.schedule-session-number');
+            if (numEl) numEl.textContent = 'Session ' + (i + 1);
+        });
+    }
+
+    /** Generate HTML options for time selects. */
+    function getTimeOptions(selected) {
+        var html = '';
+        for (var h = 6; h <= 21; h++) {
+            for (var m = 0; m < 60; m += 30) {
+                if (h === 21 && m > 0) break;
+                var val = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+                var h12 = h % 12 || 12;
+                var ampm = h < 12 ? 'AM' : 'PM';
+                var label = h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+                html += '<option value="' + val + '"' + (val === selected ? ' selected' : '') + '>' + label + '</option>';
+            }
+        }
+        return html;
     }
 
     /** Debounced AJAX conflict check. */
@@ -878,30 +1008,39 @@ displayFlash();
     }
 
     // =====================================================
-    // Form submission: build schedule string from picker
+    // Form submission: validate all sessions
     // =====================================================
     function validateScheduleForm(prefix) {
-        var days = getSelectedDays(prefix);
-        var startEl = document.getElementById(prefix + 'StartTime');
-        var endEl = document.getElementById(prefix + 'EndTime');
-        var hiddenEl = document.getElementById(prefix + 'ScheduleHidden');
-        var dayErrorEl = document.getElementById(prefix + 'DayError');
-        var timeValEl = document.getElementById(prefix + 'TimeValidation');
-
+        var sessions = getSessions(prefix);
         var valid = true;
+        var hiddenEl = document.getElementById(prefix + 'ScheduleHidden');
+        var hasAtLeastOneSession = false;
 
-        if (days.length === 0) {
-            dayErrorEl.classList.add('visible');
-            valid = false;
-        } else {
-            dayErrorEl.classList.remove('visible');
-        }
+        sessions.forEach(function(session, idx) {
+            var days = getSelectedDaysForSession(idx);
+            var startEl = session.querySelector('[data-session-start="' + idx + '"]');
+            var endEl = session.querySelector('[data-session-end="' + idx + '"]');
+            var dayErrorEl = session.querySelector('[data-session-day-error="' + idx + '"]');
+            var timeValEl = session.querySelector('[data-session-time-error="' + idx + '"]');
 
-        if (startEl.value >= endEl.value) {
-            timeValEl.classList.add('visible');
+            if (days.length === 0) {
+                dayErrorEl.classList.add('visible');
+                valid = false;
+            } else {
+                dayErrorEl.classList.remove('visible');
+                hasAtLeastOneSession = true;
+            }
+
+            if (startEl.value >= endEl.value) {
+                timeValEl.classList.add('visible');
+                valid = false;
+            } else {
+                timeValEl.classList.remove('visible');
+            }
+        });
+
+        if (!hasAtLeastOneSession) {
             valid = false;
-        } else {
-            timeValEl.classList.remove('visible');
         }
 
         if (valid) {
@@ -923,7 +1062,7 @@ displayFlash();
     });
 
     // =====================================================
-    // View Block modal (enhanced schedule display)
+    // View Block modal
     // =====================================================
     function viewBlock(btn) {
         document.getElementById('viewBlockCode').textContent = btn.dataset.blockCode;
@@ -938,7 +1077,6 @@ displayFlash();
         document.getElementById('viewSecCapacity').textContent = cap ? cap : '—';
         document.getElementById('viewSecEnrolled').textContent = enrolled;
 
-        // Build availability indicator
         var availEl = document.getElementById('viewSecAvail');
         if (cap > 0) {
             var pct = Math.min((enrolled / cap) * 100, 100);
@@ -959,27 +1097,23 @@ displayFlash();
     }
 
     // =====================================================
-    // Edit Block: parse existing schedule into picker
+    // Edit Block: parse existing multi-session schedule into picker
     // =====================================================
-    function parseScheduleString(str) {
+    function parseSingleSession(str) {
         if (!str) return null;
         var result = { days: [], startTime: '08:00', endTime: '09:30' };
 
-        // Extract time range: "HH:MM AM/PM - HH:MM AM/PM"
         var timeMatch = str.match(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
         if (timeMatch) {
             result.startTime = convertTo24h(timeMatch[1].trim());
             result.endTime = convertTo24h(timeMatch[2].trim());
         }
 
-        // Extract days: everything before the comma/first digit
         var dayPart = str.split(/,\s*/)[0].trim();
-        // Handle ranges like "Mon-Wed" and "Mon, Wed, Fri"
         var segments = dayPart.split(/[\s,]+/);
         segments.forEach(function(seg) {
             seg = seg.trim();
             if (seg.indexOf('-') !== -1) {
-                // Range like "Mon-Wed" or "Mon-Fri"
                 var rangeParts = seg.split('-');
                 var startIdx = DAY_NAMES.indexOf(rangeParts[0]);
                 var endIdx = DAY_NAMES.indexOf(rangeParts[1]);
@@ -1021,35 +1155,67 @@ displayFlash();
         document.getElementById('editSecCapacity').value = btn.dataset.capacity || '';
         document.getElementById('editSecStatus').value = btn.dataset.status;
 
-        // Parse existing schedule into the picker
+        // Parse existing schedule into sessions
         var scheduleStr = btn.dataset.schedule || '';
-        var parsed = parseScheduleString(scheduleStr);
+        var sessionStrings = scheduleStr.split(';').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+        var container = getSessionsContainer('edit');
 
-        // Reset all day chips
-        document.getElementById('editDayChips').querySelectorAll('.day-chip').forEach(function(chip) {
-            chip.classList.remove('selected');
-        });
+        // Clear existing sessions
+        container.innerHTML = '';
+        sessionCounters.edit = 0;
 
-        if (parsed && parsed.days.length > 0) {
-            // Select the matching day chips
-            parsed.days.forEach(function(d) {
-                var chip = document.querySelector('#editDayChips .day-chip[data-day="' + d + '"]');
-                if (chip) chip.classList.add('selected');
-            });
-            document.getElementById('editStartTime').value = parsed.startTime;
-            document.getElementById('editEndTime').value = parsed.endTime;
+        if (sessionStrings.length === 0) {
+            sessionStrings = [''];
         }
 
-        // Set hidden field
-        document.getElementById('editScheduleHidden').value = scheduleStr;
+        sessionStrings.forEach(function(sessionStr, i) {
+            var idx = sessionCounters.edit++;
+            var parsed = sessionStr ? parseSingleSession(sessionStr) : { days: [], startTime: '08:00', endTime: '09:30' };
 
-        // Update preview
+            var dayBtns = '';
+            for (var d = 0; d < 6; d++) {
+                var selected = parsed.days.indexOf(d) !== -1 ? ' selected' : '';
+                dayBtns += '<button type="button" class="day-chip' + selected + '" data-day="' + d + '" onclick="toggleDay(this, ' + idx + ', \'' + 'edit' + '\')">' + DAY_NAMES[d] + '</button>';
+            }
+
+            var html = '<div class="schedule-session" data-session="' + idx + '">' +
+                '<div class="schedule-session-header">' +
+                    '<span class="schedule-session-number">Session ' + (i + 1) + '</span>' +
+                    (i > 0 ? '<button type="button" class="btn btn-danger btn-sm session-remove-btn" onclick="removeSession(this, ' + idx + ', \'' + 'edit' + '\')">Remove</button>' : '') +
+                '</div>' +
+                '<div class="day-shortcuts">' +
+                    '<button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, ' + idx + ', \'' + 'edit' + '\')">MWF</button>' +
+                    '<button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, ' + idx + ', \'' + 'edit' + '\')">TTh</button>' +
+                    '<button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, ' + idx + ', \'' + 'edit' + '\')">Mon-Fri</button>' +
+                    '<button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, ' + idx + ', \'' + 'edit' + '\')">Saturday</button>' +
+                '</div>' +
+                '<div class="day-chips" data-session-days="' + idx + '">' + dayBtns + '</div>' +
+                '<div class="day-chips-error" data-session-day-error="' + idx + '">Please select at least one day.</div>' +
+                '<div class="schedule-time-row">' +
+                    '<div class="time-select">' +
+                        '<label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>' +
+                        '<select class="form-control" data-session-start="' + idx + '" onchange="updateSchedulePreview(\'' + 'edit' + '\')">' +
+                            getTimeOptions(parsed.startTime) +
+                        '</select>' +
+                    '</div>' +
+                    '<span class="time-separator">to</span>' +
+                    '<div class="time-select">' +
+                        '<label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>' +
+                        '<select class="form-control" data-session-end="' + idx + '" onchange="updateSchedulePreview(\'' + 'edit' + '\')">' +
+                            getTimeOptions(parsed.endTime) +
+                        '</select>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="time-validation" data-session-time-error="' + idx + '">End time must be after start time.</div>' +
+            '</div>';
+
+            container.insertAdjacentHTML('beforeend', html);
+        });
+
+        document.getElementById('editScheduleHidden').value = scheduleStr;
         updateSchedulePreview('edit');
 
-        // Hide conflict alerts
         document.getElementById('editConflictAlert').classList.remove('visible');
-        document.getElementById('editDayError').classList.remove('visible');
-        document.getElementById('editTimeValidation').classList.remove('visible');
 
         document.getElementById('editBlockModal').style.display = 'block';
     }
@@ -1068,20 +1234,19 @@ displayFlash();
     // Reset add modal state when opened
     document.querySelector('[onclick="document.getElementById(\'addBlockModal\').style.display=\'block\'"]')
         .addEventListener('click', function() {
-            // Reset day chips
-            document.getElementById('addDayChips').querySelectorAll('.day-chip').forEach(function(chip) {
-                chip.classList.remove('selected');
-            });
-            document.getElementById('addStartTime').value = '08:00';
-            document.getElementById('addEndTime').value = '09:30';
+            // Reset to single session
+            var container = getSessionsContainer('add');
+            container.innerHTML = '';
+            sessionCounters.add = 0;
+            addSession('add');
             document.getElementById('addScheduleHidden').value = '';
             document.getElementById('addSchedulePreview').textContent = 'Select days and time above';
             document.getElementById('addSchedulePreview').classList.add('empty');
             document.getElementById('addConflictAlert').classList.remove('visible');
-            document.getElementById('addDayError').classList.remove('visible');
-            document.getElementById('addTimeValidation').classList.remove('visible');
             document.getElementById('addRoomConflict').classList.remove('visible');
         });
+
+    initTableSearch('scheduleSearch', 'scheduleTable');
 </script>
 
 <?php include '../includes/footer.php'; ?>

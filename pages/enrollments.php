@@ -202,6 +202,9 @@ ksort($studentsByBlock);
 // ── Unique terms for filter ──
 $terms = $db->query("SELECT DISTINCT t.term_name, t.academic_year FROM academic_terms t ORDER BY t.academic_year DESC, t.term_name DESC")->fetchAll();
 
+// Fetch departments for modal filter
+$departments = $db->query("SELECT * FROM departments WHERE is_active = 1 ORDER BY department_name")->fetchAll();
+
 $pageTitle = 'Enrollments';
 include '../includes/header.php';
 displayFlash();
@@ -432,6 +435,36 @@ displayFlash();
     font-weight: 700;
 }
 
+/* Enrollment modal filters */
+.enrollment-modal-filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.enrollment-modal-filter {
+    flex: 1;
+    min-width: 120px;
+}
+.enrollment-modal-filter label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.enrollment-modal-filter .form-control {
+    min-height: 34px;
+    padding: 4px 10px;
+    font-size: 13px;
+}
+.enrollment-modal-filter:first-child {
+    flex: 2;
+    min-width: 180px;
+}
+
 @media (max-width: 1100px) {
     .enrollment-stats {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -601,7 +634,7 @@ displayFlash();
 
 <!-- ── Enroll Modal ── -->
 <div id="enrollModal" class="modal-overlay" style="display: none;">
-    <div class="modal-box" style="max-width: 600px;">
+    <div class="modal-box" style="max-width: 820px;">
         <h2><?php echo icon('plus', 20); ?> Enroll Students</h2>
 
         <!-- Section Selection -->
@@ -635,8 +668,32 @@ displayFlash();
         <div class="form-group">
             <label>Select Students to Enroll</label>
 
-            <div style="margin-bottom: 8px;">
-                <input type="text" id="studentSearchInput" class="form-control" placeholder="Search students by name or ID..." oninput="filterStudentPicker()">
+            <!-- Filter Bar -->
+            <div class="enrollment-modal-filters">
+                <div class="enrollment-modal-filter">
+                    <label>Search</label>
+                    <input type="text" id="studentSearchInput" class="form-control" placeholder="Name or ID..." oninput="filterStudentPicker()">
+                </div>
+                <div class="enrollment-modal-filter">
+                    <label>Department</label>
+                    <select id="filterDept" class="form-control" onchange="filterStudentPicker()">
+                        <option value="">All Departments</option>
+                        <?php foreach ($departments as $dept): ?>
+                        <option value="<?php echo htmlspecialchars($dept['department_code']); ?>">
+                            <?php echo htmlspecialchars($dept['department_code'] . ' - ' . $dept['department_name']); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="enrollment-modal-filter">
+                    <label>Year</label>
+                    <select id="filterYear" class="form-control" onchange="filterStudentPicker()">
+                        <option value="">All Years</option>
+                        <?php for ($y = 1; $y <= 5; $y++): ?>
+                        <option value="<?php echo $y; ?>">Year <?php echo $y; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
             </div>
 
             <div class="select-toggle-bar">
@@ -658,7 +715,7 @@ displayFlash();
                         </div>
                         <div class="student-block-list open">
                             <?php foreach ($blockStudents as $student): ?>
-                            <label data-student-search="<?php echo htmlspecialchars(strtolower($student['student_id'] . ' ' . $student['first_name'] . ' ' . $student['last_name'])); ?>">
+                            <label data-student-search="<?php echo htmlspecialchars(strtolower($student['student_id'] . ' ' . $student['first_name'] . ' ' . $student['last_name'])); ?>" data-dept="<?php echo htmlspecialchars($student['department_code'] ?? ''); ?>" data-year="<?php echo htmlspecialchars($student['block_year_level'] ?? ''); ?>">
                                 <input type="checkbox" name="student_ids[]" value="<?php echo $student['id']; ?>" onchange="updateSelectedCount()">
                                 <span>
                                     <?php echo htmlspecialchars($student['student_id'] . ' — ' . $student['first_name'] . ' ' . $student['last_name']); ?>
@@ -681,7 +738,7 @@ displayFlash();
                     </div>
                     <div class="student-block-list">
                         <?php foreach ($unassignedStudents as $student): ?>
-                        <label data-student-search="<?php echo htmlspecialchars(strtolower($student['student_id'] . ' ' . $student['first_name'] . ' ' . $student['last_name'])); ?>">
+                        <label data-student-search="<?php echo htmlspecialchars(strtolower($student['student_id'] . ' ' . $student['first_name'] . ' ' . $student['last_name'])); ?>" data-dept="" data-year="">
                             <input type="checkbox" name="student_ids[]" value="<?php echo $student['id']; ?>" onchange="updateSelectedCount()">
                             <span>
                                 <?php echo htmlspecialchars($student['student_id'] . ' — ' . $student['first_name'] . ' ' . $student['last_name']); ?>
@@ -799,6 +856,8 @@ function openEnrollModal() {
     document.getElementById('enrollSectionSelect').value = '';
     document.getElementById('capacityInfo').style.display = 'none';
     document.getElementById('studentSearchInput').value = '';
+    document.getElementById('filterDept').value = '';
+    document.getElementById('filterYear').value = '';
     document.querySelectorAll('#enrollForm input[name="student_ids[]"]').forEach(function(cb) { cb.checked = false; });
     updateSelectedCount();
     filterStudentPicker();
@@ -842,6 +901,8 @@ function toggleBlock(header) {
 // ── Student search / filter ──
 function filterStudentPicker() {
     var query = document.getElementById('studentSearchInput').value.toLowerCase().trim();
+    var deptFilter = document.getElementById('filterDept').value;
+    var yearFilter = document.getElementById('filterYear').value;
     var groups = document.querySelectorAll('.student-block-group');
     var anyVisible = false;
 
@@ -849,15 +910,18 @@ function filterStudentPicker() {
         var labels = group.querySelectorAll('label[data-student-search]');
         var groupVisible = false;
         labels.forEach(function(label) {
-            var match = !query || label.dataset.studentSearch.indexOf(query) !== -1;
+            var matchSearch = !query || label.dataset.studentSearch.indexOf(query) !== -1;
+            var matchDept = !deptFilter || label.dataset.dept === deptFilter;
+            var matchYear = !yearFilter || label.dataset.year === yearFilter;
+            var match = matchSearch && matchDept && matchYear;
             label.style.display = match ? 'flex' : 'none';
             if (match) groupVisible = true;
         });
         group.style.display = groupVisible ? 'block' : 'none';
         if (groupVisible) anyVisible = true;
 
-        // Auto-open blocks when searching
-        if (query && groupVisible) {
+        // Auto-open blocks when filtering
+        if ((query || deptFilter || yearFilter) && groupVisible) {
             group.querySelector('.student-block-list').classList.add('open');
         }
     });
@@ -994,6 +1058,13 @@ function clearFilters() {
     document.getElementById('filterStatus').value = '';
     document.getElementById('filterTerm').value = '';
     filterEnrollments();
+}
+
+function clearStudentFilters() {
+    document.getElementById('studentSearchInput').value = '';
+    document.getElementById('filterDept').value = '';
+    document.getElementById('filterYear').value = '';
+    filterStudentPicker();
 }
 </script>
 

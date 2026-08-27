@@ -88,7 +88,15 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addDeptModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Department</button>
         </div>
 
-        <table data-pagination data-page-size="8">
+        <div class="table-search-bar">
+            <div class="table-search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="deptSearch" placeholder="Search by code, name...">
+            </div>
+            <span class="search-count"></span>
+        </div>
+
+        <table data-pagination data-page-size="8" id="deptTable">
             <thead>
                 <tr>
                     <th>Code</th>
@@ -101,7 +109,7 @@ displayFlash();
             </thead>
             <tbody>
                 <?php foreach ($departments as $department): ?>
-                <tr>
+                <tr data-search="<?php echo htmlspecialchars(strtolower($department['department_code'] . ' ' . $department['department_name'] . ' ' . ($department['description'] ?? ''))); ?>">
                     <td data-label="Code"><code><?php echo htmlspecialchars($department['department_code']); ?></code></td>
                     <td data-label="Name"><?php echo htmlspecialchars($department['department_name']); ?></td>
                     <td data-label="Description"><?php echo htmlspecialchars($department['description'] ?? ''); ?></td>
@@ -241,6 +249,8 @@ displayFlash();
             }
         });
     });
+
+    initTableSearch('deptSearch', 'deptTable');
 </script>
 
 <?php include '../includes/footer.php'; ?>

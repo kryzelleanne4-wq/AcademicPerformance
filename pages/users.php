@@ -154,7 +154,15 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addUserModal').style.display='block'"><?php echo icon('plus', 14); ?> Add User</button>
         </div>
 
-        <table data-pagination data-page-size="8">
+        <div class="table-search-bar">
+            <div class="table-search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="userSearch" placeholder="Search by name, ID, email, role...">
+            </div>
+            <span class="search-count"></span>
+        </div>
+
+        <table data-pagination data-page-size="8" id="userTable">
             <thead>
                 <tr>
                     <th>Login ID</th>
@@ -168,7 +176,7 @@ displayFlash();
             </thead>
             <tbody>
                 <?php foreach ($allUsers as $u): ?>
-                <tr>
+                <tr data-search="<?php echo htmlspecialchars(strtolower($u['login_id'] . ' ' . $u['display_name'] . ' ' . roleLabel($u['role']) . ' ' . ($u['email'] ?? ''))); ?>">
                     <td data-label="Login ID"><code><?php echo htmlspecialchars($u['login_id']); ?></code></td>
                     <td data-label="Name"><?php echo htmlspecialchars($u['display_name']); ?></td>
                     <td data-label="Role">
@@ -339,6 +347,8 @@ displayFlash();
             this.style.display = 'none';
         }
     });
+
+    initTableSearch('userSearch', 'userTable');
 </script>
 
 <?php include '../includes/footer.php'; ?>

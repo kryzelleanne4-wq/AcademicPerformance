@@ -99,7 +99,15 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addBlockModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Block</button>
         </div>
 
-        <table data-pagination data-page-size="8">
+        <div class="table-search-bar">
+            <div class="table-search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="blockSearch" placeholder="Search by block, department, year...">
+            </div>
+            <span class="search-count"></span>
+        </div>
+
+        <table data-pagination data-page-size="8" id="blockTable">
             <thead>
                 <tr>
                     <th>Block</th>
@@ -116,7 +124,7 @@ displayFlash();
             <tbody>
                 <?php foreach ($blocks as $block): ?>
                 <?php $label = blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name']); ?>
-                <tr>
+                <tr data-search="<?php echo htmlspecialchars(strtolower($block['block_code'] . ' ' . $block['department_code'] . ' ' . $block['department_name'] . ' ' . yearOrdinal($block['year_level']) . ' ' . $label)); ?>">
                     <td data-label="Block"><code><?php echo htmlspecialchars($block['block_code']); ?></code></td>
                     <td data-label="Department"><?php echo htmlspecialchars($block['department_code'] . ' - ' . $block['department_name']); ?></td>
                     <td data-label="Year Level"><?php echo htmlspecialchars(yearOrdinal($block['year_level']) . ' Year'); ?></td>
@@ -318,6 +326,8 @@ displayFlash();
             }
         });
     });
+
+    initTableSearch('blockSearch', 'blockTable');
 </script>
 
 <?php include '../includes/footer.php'; ?>

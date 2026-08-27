@@ -113,7 +113,15 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addSubjectModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Subject</button>
         </div>
 
-        <table data-pagination data-page-size="8">
+        <div class="table-search-bar">
+            <div class="table-search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="subjectSearch" placeholder="Search by code, name, department...">
+            </div>
+            <span class="search-count"></span>
+        </div>
+
+        <table data-pagination data-page-size="8" id="subjectTable">
             <thead>
                 <tr>
                     <th>Code</th>
@@ -127,7 +135,7 @@ displayFlash();
             </thead>
             <tbody>
                 <?php foreach ($subjects as $subject): ?>
-                <tr>
+                <tr data-search="<?php echo htmlspecialchars(strtolower($subject['subject_code'] . ' ' . $subject['subject_name'] . ' ' . ($subject['department_code'] ?? '') . ' ' . ($subject['department_name'] ?? ''))); ?>">
                     <td data-label="Code"><code><?php echo htmlspecialchars($subject['subject_code']); ?></code></td>
                     <td data-label="Name"><?php echo htmlspecialchars($subject['subject_name']); ?></td>
                     <td data-label="Department"><?php echo htmlspecialchars($subject['department_name'] ?? '—'); ?></td>
@@ -350,6 +358,8 @@ displayFlash();
             }
         });
     });
+
+    initTableSearch('subjectSearch', 'subjectTable');
 </script>
 
 <?php include '../includes/footer.php'; ?>

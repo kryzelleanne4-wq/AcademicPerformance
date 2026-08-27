@@ -1746,3 +1746,105 @@ small {
 .time-validation.visible {
     display: block;
 }
+
+/* ========================================
+   Multi-Session Schedule Picker
+   ======================================== */
+.schedule-session {
+    position: relative;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-white);
+    transition: box-shadow 150ms ease;
+}
+
+.schedule-session:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+.schedule-session-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.schedule-session-number {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+}
+
+.session-remove-btn {
+    min-height: 28px;
+    padding: 2px 8px;
+    font-size: 11px;
+}
+
+/* ========================================
+   Table Search Bar
+   ======================================== */
+.table-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--outline-soft);
+    background: var(--surface-low);
+}
+
+.table-search-bar .search-icon {
+    flex-shrink: 0;
+    color: var(--ink-muted);
+}
+
+.table-search-bar input {
+    flex: 1;
+    min-width: 0;
+    max-width: 400px;
+    min-height: 36px;
+    padding: 6px 12px 6px 36px;
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-white);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 20px;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.table-search-bar input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 30, 64, 0.1);
+}
+
+.table-search-bar .search-count {
+    flex-shrink: 0;
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.table-search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.table-search-wrapper .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.table-search-wrapper input {
+    padding-left: 36px;
+    max-width: 100%;
+}

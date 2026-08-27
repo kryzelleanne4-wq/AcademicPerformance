@@ -199,7 +199,15 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addInstructorModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Instructor</button>
         </div>
 
-        <table data-pagination data-page-size="8">
+        <div class="table-search-bar">
+            <div class="table-search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="instructorSearch" placeholder="Search by name, ID, department, email...">
+            </div>
+            <span class="search-count"></span>
+        </div>
+
+        <table data-pagination data-page-size="8" id="instructorTable">
             <thead>
                 <tr>
                     <th>Employee ID</th>
@@ -214,7 +222,7 @@ displayFlash();
             </thead>
             <tbody>
                 <?php foreach ($instructors as $inst): ?>
-                <tr>
+                <tr data-search="<?php echo htmlspecialchars(strtolower($inst['employee_id'] . ' ' . $inst['first_name'] . ' ' . $inst['last_name'] . ' ' . ($inst['department_code'] ?? '') . ' ' . ($inst['department_name'] ?? '') . ' ' . ($inst['email'] ?? '') . ' ' . ($inst['title'] ?? ''))); ?>">
                     <td data-label="Employee ID"><code><?php echo htmlspecialchars($inst['employee_id']); ?></code></td>
                     <td data-label="Name"><?php echo htmlspecialchars($inst['first_name'] . ' ' . $inst['last_name']); ?></td>
                     <td data-label="Department"><?php echo htmlspecialchars($inst['department_code'] ? $inst['department_code'] . ' - ' . $inst['department_name'] : '—'); ?></td>
@@ -498,6 +506,8 @@ displayFlash();
             }
         });
     });
+
+    initTableSearch('instructorSearch', 'instructorTable');
 </script>
 
 <?php include '../includes/footer.php'; ?>
