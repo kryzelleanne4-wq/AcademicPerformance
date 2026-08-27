@@ -1503,3 +1503,246 @@ small {
         gap: 0;
     }
 }
+
+/* ========================================
+   Schedule Picker (Day Chips + Time Selectors)
+   ======================================== */
+.schedule-picker {
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    background: var(--surface-low);
+}
+
+.schedule-picker-label {
+    display: block;
+    margin-bottom: 12px;
+    color: var(--ink-muted);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+.schedule-picker-hint {
+    display: block;
+    margin-bottom: 16px;
+    color: var(--ink-muted);
+    font-size: 12px;
+    line-height: 16px;
+}
+
+/* Day chips */
+.day-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.day-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    height: 40px;
+    padding: 6px 14px;
+    border: 2px solid var(--outline-soft);
+    border-radius: var(--radius-pill);
+    background: var(--surface-white);
+    color: var(--ink-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: all 150ms ease;
+}
+
+.day-chip:hover {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    background: var(--primary-soft);
+}
+
+.day-chip.selected {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--surface-white);
+}
+
+.day-chips-error {
+    margin-top: -8px;
+    margin-bottom: 16px;
+    color: var(--error);
+    font-size: 12px;
+    font-weight: 600;
+    display: none;
+}
+
+.day-chips-error.visible {
+    display: block;
+}
+
+/* Time selectors */
+.schedule-time-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.schedule-time-row .time-separator {
+    color: var(--ink-muted);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.time-select {
+    flex: 1;
+    max-width: 200px;
+}
+
+.time-select .form-control {
+    font-size: 13px;
+}
+
+/* Schedule preview */
+.schedule-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-white);
+    min-height: 40px;
+}
+
+.schedule-preview-label {
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.schedule-preview-value {
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.schedule-preview-value.empty {
+    color: var(--ink-muted);
+    font-weight: 400;
+    font-style: italic;
+}
+
+/* Conflict alert inside modal */
+.conflict-alert {
+    display: none;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-top: 8px;
+    border: 1px solid #f0aaa5;
+    border-radius: var(--radius-sm);
+    background: var(--error-soft);
+    color: var(--error);
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.conflict-alert.visible {
+    display: flex;
+}
+
+.conflict-alert-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.conflict-alert-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.conflict-alert-list li {
+    padding: 2px 0;
+}
+
+.conflict-alert-list li:not(:last-child)::after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: rgba(186, 26, 26, 0.15);
+    margin-top: 4px;
+}
+
+/* Quick day shortcut buttons */
+.day-shortcuts {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.day-shortcut {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--radius-pill);
+    background: var(--surface-white);
+    color: var(--ink-muted);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 150ms ease;
+}
+
+.day-shortcut:hover {
+    border-color: var(--primary-light);
+    color: var(--primary);
+    background: var(--primary-soft);
+}
+
+/* Wider modal for schedule picker */
+.modal-box.modal-schedule {
+    width: min(100%, 620px);
+}
+
+/* Room conflict highlight */
+.room-conflict-warning {
+    display: none;
+    padding: 8px 12px;
+    margin-top: 4px;
+    border: 1px solid #f0aaa5;
+    border-radius: var(--radius-sm);
+    background: var(--error-soft);
+    color: var(--error);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.room-conflict-warning.visible {
+    display: block;
+}
+
+/* Time validation message */
+.time-validation {
+    display: none;
+    padding: 8px 12px;
+    margin-top: 4px;
+    border: 1px solid #f0aaa5;
+    border-radius: var(--radius-sm);
+    background: var(--error-soft);
+    color: var(--error);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.time-validation.visible {
+    display: block;
+}

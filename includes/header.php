@@ -53,6 +53,10 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
                     <span class="icon"><?php echo icon('user'); ?></span>
                     Students
                 </a>
+                <a href="<?php echo $assetPrefix; ?>pages/instructors.php" class="menu-item <?php echo $currentPage === 'instructors' ? 'active' : ''; ?>">
+                    <span class="icon"><?php echo icon('users'); ?></span>
+                    Instructors
+                </a>
                 <a href="<?php echo $assetPrefix; ?>pages/departments.php" class="menu-item <?php echo $currentPage === 'departments' ? 'active' : ''; ?>">
                     <span class="icon"><?php echo icon('landmark'); ?></span>
                     Departments

@@ -311,10 +311,11 @@ displayFlash();
 
 <!-- Add Block Modal -->
 <div id="addBlockModal" class="modal-overlay" style="display: none;">
-    <div class="modal-box">
-        <h2>Add Class Block</h2>
-        <form method="POST">
+    <div class="modal-box modal-schedule">
+        <h2><?php echo icon('calendar', 20); ?> Add Class Block</h2>
+        <form method="POST" id="addBlockForm">
             <input type="hidden" name="action" value="add_block">
+            <input type="hidden" name="schedule" id="addScheduleHidden">
 
             <div class="form-row">
                 <div class="form-group">
@@ -337,7 +338,7 @@ displayFlash();
             <div class="form-row">
                 <div class="form-group">
                     <label>Instructor</label>
-                    <select name="instructor_id" class="form-control" required>
+                    <select name="instructor_id" class="form-control" id="addInstructorId" required>
                         <option value="">-- Select Instructor --</option>
                         <?php foreach ($instructors as $instructor): ?>
                         <option value="<?php echo $instructor['id']; ?>">
@@ -348,7 +349,7 @@ displayFlash();
                 </div>
                 <div class="form-group">
                     <label>Term</label>
-                    <select name="term_id" class="form-control" required>
+                    <select name="term_id" class="form-control" id="addTermId" required>
                         <?php foreach ($terms as $term): ?>
                         <option value="<?php echo $term['id']; ?>" <?php echo $term['is_current'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($term['term_name'] . ' ' . $term['academic_year'] . ($term['is_current'] ? ' (Current)' : '')); ?>
@@ -360,7 +361,7 @@ displayFlash();
 
             <div class="form-group">
                 <label>Class Block</label>
-                <select name="block_id" class="form-control">
+                <select name="block_id" class="form-control" id="addBlockId">
                     <option value="">-- No Class Block --</option>
                     <?php foreach ($blocks as $block): ?>
                     <option value="<?php echo $block['id']; ?>">
@@ -370,20 +371,96 @@ displayFlash();
                 </select>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Schedule (Days / Time)</label>
-                    <input type="text" name="schedule" class="form-control" placeholder="e.g. Mon & Wed, 8:00 - 9:30 AM">
+            <!-- Schedule Picker -->
+            <div class="schedule-picker" id="addSchedulePicker">
+                <label class="schedule-picker-label">Schedule</label>
+                <span class="schedule-picker-hint">Select the days and time range for this class.</span>
+
+                <!-- Quick shortcuts -->
+                <div class="day-shortcuts">
+                    <button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, 'add')">MWF</button>
+                    <button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, 'add')">TTh</button>
+                    <button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, 'add')">Mon-Fri</button>
+                    <button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, 'add')">Saturday</button>
                 </div>
-                <div class="form-group">
-                    <label>Room</label>
-                    <input type="text" name="room" class="form-control" placeholder="e.g. Room 201">
+
+                <!-- Day chips -->
+                <div class="day-chips" id="addDayChips">
+                    <button type="button" class="day-chip" data-day="0" onclick="toggleDay(this, 'add')">Mon</button>
+                    <button type="button" class="day-chip" data-day="1" onclick="toggleDay(this, 'add')">Tue</button>
+                    <button type="button" class="day-chip" data-day="2" onclick="toggleDay(this, 'add')">Wed</button>
+                    <button type="button" class="day-chip" data-day="3" onclick="toggleDay(this, 'add')">Thu</button>
+                    <button type="button" class="day-chip" data-day="4" onclick="toggleDay(this, 'add')">Fri</button>
+                    <button type="button" class="day-chip" data-day="5" onclick="toggleDay(this, 'add')">Sat</button>
+                </div>
+                <div class="day-chips-error" id="addDayError">Please select at least one day.</div>
+
+                <!-- Time range -->
+                <div class="schedule-time-row">
+                    <div class="time-select">
+                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>
+                        <select class="form-control" id="addStartTime" onchange="updateSchedulePreview('add')">
+                            <?php
+                            for ($h = 6; $h <= 21; $h++) {
+                                foreach ([0, 30] as $m) {
+                                    if ($h === 21 && $m > 0) break;
+                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                    $h12 = $h % 12 ?: 12;
+                                    $ampm = $h < 12 ? 'AM' : 'PM';
+                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                    echo '<option value="' . $val . '">' . $label . '</option>';
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <span class="time-separator">to</span>
+                    <div class="time-select">
+                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>
+                        <select class="form-control" id="addEndTime" onchange="updateSchedulePreview('add')">
+                            <?php
+                            for ($h = 6; $h <= 21; $h++) {
+                                foreach ([0, 30] as $m) {
+                                    if ($h === 21 && $m > 0) break;
+                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                    $h12 = $h % 12 ?: 12;
+                                    $ampm = $h < 12 ? 'AM' : 'PM';
+                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                    echo '<option value="' . $val . '"' . ($h === 9 && $m === 30 ? ' selected' : '') . '>' . $label . '</option>';
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="time-validation" id="addTimeValidation">End time must be after start time.</div>
+
+                <!-- Preview -->
+                <div class="schedule-preview">
+                    <span class="schedule-preview-label">Generated:</span>
+                    <span class="schedule-preview-value empty" id="addSchedulePreview">Select days and time above</span>
+                </div>
+
+                <!-- Conflict alert -->
+                <div class="conflict-alert" id="addConflictAlert">
+                    <span class="conflict-alert-icon">⚠</span>
+                    <div>
+                        <strong>Schedule Conflict Detected</strong>
+                        <ul class="conflict-alert-list" id="addConflictList"></ul>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Capacity</label>
-                <input type="number" name="capacity" class="form-control" min="1" placeholder="e.g. 40">
+            <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                    <label>Room</label>
+                    <input type="text" name="room" class="form-control" id="addRoom" placeholder="e.g. Room 201" oninput="checkRoomConflict('add')">
+                    <div class="room-conflict-warning" id="addRoomConflict">This room may have a scheduling conflict.</div>
+                </div>
+                <div class="form-group">
+                    <label>Capacity</label>
+                    <input type="number" name="capacity" class="form-control" min="1" placeholder="e.g. 40">
+                </div>
             </div>
 
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -418,11 +495,12 @@ displayFlash();
 
 <!-- Edit Block Modal -->
 <div id="editBlockModal" class="modal-overlay" style="display: none;">
-    <div class="modal-box">
+    <div class="modal-box modal-schedule">
         <h2><?php echo icon('pen-line', 20); ?> Edit Schedule</h2>
-        <form method="POST">
+        <form method="POST" id="editBlockForm">
             <input type="hidden" name="action" value="update_block">
             <input type="hidden" name="id" id="editSecId">
+            <input type="hidden" name="schedule" id="editScheduleHidden">
 
             <div class="form-row">
                 <div class="form-group">
@@ -476,22 +554,99 @@ displayFlash();
                 </select>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Schedule (Days / Time)</label>
-                    <input type="text" name="schedule" id="editSecSchedule" class="form-control" placeholder="e.g. Mon & Wed, 8:00 - 9:30 AM">
+            <!-- Schedule Picker -->
+            <div class="schedule-picker" id="editSchedulePicker">
+                <label class="schedule-picker-label">Schedule</label>
+                <span class="schedule-picker-hint">Select the days and time range for this class.</span>
+
+                <!-- Quick shortcuts -->
+                <div class="day-shortcuts">
+                    <button type="button" class="day-shortcut" data-days="0,2,4" onclick="setDayShortcut(this, 'edit')">MWF</button>
+                    <button type="button" class="day-shortcut" data-days="1,3" onclick="setDayShortcut(this, 'edit')">TTh</button>
+                    <button type="button" class="day-shortcut" data-days="0,1,2,3,4" onclick="setDayShortcut(this, 'edit')">Mon-Fri</button>
+                    <button type="button" class="day-shortcut" data-days="5" onclick="setDayShortcut(this, 'edit')">Saturday</button>
                 </div>
-                <div class="form-group">
-                    <label>Room</label>
-                    <input type="text" name="room" id="editSecRoom" class="form-control" placeholder="e.g. Room 201">
+
+                <!-- Day chips -->
+                <div class="day-chips" id="editDayChips">
+                    <button type="button" class="day-chip" data-day="0" onclick="toggleDay(this, 'edit')">Mon</button>
+                    <button type="button" class="day-chip" data-day="1" onclick="toggleDay(this, 'edit')">Tue</button>
+                    <button type="button" class="day-chip" data-day="2" onclick="toggleDay(this, 'edit')">Wed</button>
+                    <button type="button" class="day-chip" data-day="3" onclick="toggleDay(this, 'edit')">Thu</button>
+                    <button type="button" class="day-chip" data-day="4" onclick="toggleDay(this, 'edit')">Fri</button>
+                    <button type="button" class="day-chip" data-day="5" onclick="toggleDay(this, 'edit')">Sat</button>
+                </div>
+                <div class="day-chips-error" id="editDayError">Please select at least one day.</div>
+
+                <!-- Time range -->
+                <div class="schedule-time-row">
+                    <div class="time-select">
+                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">Start Time</label>
+                        <select class="form-control" id="editStartTime" onchange="updateSchedulePreview('edit')">
+                            <?php
+                            for ($h = 6; $h <= 21; $h++) {
+                                foreach ([0, 30] as $m) {
+                                    if ($h === 21 && $m > 0) break;
+                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                    $h12 = $h % 12 ?: 12;
+                                    $ampm = $h < 12 ? 'AM' : 'PM';
+                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                    echo '<option value="' . $val . '">' . $label . '</option>';
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <span class="time-separator">to</span>
+                    <div class="time-select">
+                        <label style="font-size:12px;font-weight:600;color:var(--ink-muted);margin-bottom:4px;display:block;">End Time</label>
+                        <select class="form-control" id="editEndTime" onchange="updateSchedulePreview('edit')">
+                            <?php
+                            for ($h = 6; $h <= 21; $h++) {
+                                foreach ([0, 30] as $m) {
+                                    if ($h === 21 && $m > 0) break;
+                                    $val = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                    $h12 = $h % 12 ?: 12;
+                                    $ampm = $h < 12 ? 'AM' : 'PM';
+                                    $label = $h12 . ':' . str_pad($m, 2, '0', STR_PAD_LEFT) . ' ' . $ampm;
+                                    echo '<option value="' . $val . '">' . $label . '</option>';
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="time-validation" id="editTimeValidation">End time must be after start time.</div>
+
+                <!-- Preview -->
+                <div class="schedule-preview">
+                    <span class="schedule-preview-label">Generated:</span>
+                    <span class="schedule-preview-value empty" id="editSchedulePreview">Select days and time above</span>
+                </div>
+
+                <!-- Conflict alert -->
+                <div class="conflict-alert" id="editConflictAlert">
+                    <span class="conflict-alert-icon">⚠</span>
+                    <div>
+                        <strong>Schedule Conflict Detected</strong>
+                        <ul class="conflict-alert-list" id="editConflictList"></ul>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-row">
+            <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                    <label>Room</label>
+                    <input type="text" name="room" id="editSecRoom" class="form-control" placeholder="e.g. Room 201" oninput="checkRoomConflict('edit')">
+                    <div class="room-conflict-warning" id="editRoomConflict">This room may have a scheduling conflict.</div>
+                </div>
                 <div class="form-group">
                     <label>Capacity</label>
                     <input type="number" name="capacity" id="editSecCapacity" class="form-control" min="1" placeholder="e.g. 40">
                 </div>
+            </div>
+
+            <div class="form-row">
                 <div class="form-group">
                     <label>Status</label>
                     <select name="status" id="editSecStatus" class="form-control">
@@ -500,6 +655,7 @@ displayFlash();
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="form-group"></div>
             </div>
 
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
@@ -555,6 +711,220 @@ displayFlash();
 </div>
 
 <script>
+    // =====================================================
+    // Schedule Picker: Day selection, time range, preview
+    // =====================================================
+    const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const DAY_LETTERS = ['M', 'T', 'W', 'Th', 'F', 'S'];
+    const conflictTimers = {};
+
+    /** Toggle a day chip on/off and refresh the preview. */
+    function toggleDay(chip, prefix) {
+        chip.classList.toggle('selected');
+        document.getElementById(prefix + 'DayError').classList.remove('visible');
+        updateSchedulePreview(prefix);
+    }
+
+    /** Apply a day shortcut (MWF, TTh, etc.). */
+    function setDayShortcut(btn, prefix) {
+        var days = btn.dataset.days.split(',').map(Number);
+        var chips = document.getElementById(prefix + 'DayChips').querySelectorAll('.day-chip');
+        chips.forEach(function(chip) {
+            if (days.indexOf(parseInt(chip.dataset.day)) !== -1) {
+                chip.classList.add('selected');
+            } else {
+                chip.classList.remove('selected');
+            }
+        });
+        document.getElementById(prefix + 'DayError').classList.remove('visible');
+        updateSchedulePreview(prefix);
+    }
+
+    /** Get selected day values from chips. */
+    function getSelectedDays(prefix) {
+        var chips = document.getElementById(prefix + 'DayChips').querySelectorAll('.day-chip.selected');
+        var days = [];
+        chips.forEach(function(c) { days.push(parseInt(c.dataset.day)); });
+        return days.sort(function(a, b) { return a - b; });
+    }
+
+    /** Convert "HH:MM" to readable "H:MM AM/PM". */
+    function formatTime12(h24) {
+        var parts = h24.split(':');
+        var h = parseInt(parts[0]);
+        var m = parts[1] || '00';
+        var suffix = h >= 12 ? 'PM' : 'AM';
+        var h12 = h % 12;
+        if (h12 === 0) h12 = 12;
+        return h12 + ':' + m + ' ' + suffix;
+    }
+
+    /** Build the schedule string from the picker state and update the preview. */
+    function updateSchedulePreview(prefix) {
+        var days = getSelectedDays(prefix);
+        var startEl = document.getElementById(prefix + 'StartTime');
+        var endEl = document.getElementById(prefix + 'EndTime');
+        var previewEl = document.getElementById(prefix + 'SchedulePreview');
+        var hiddenEl = document.getElementById(prefix + 'ScheduleHidden');
+        var timeValEl = document.getElementById(prefix + 'TimeValidation');
+        var startTime = startEl.value;
+        var endTime = endEl.value;
+
+        // Validate time
+        if (startTime && endTime && startTime >= endTime) {
+            timeValEl.classList.add('visible');
+        } else {
+            timeValEl.classList.remove('visible');
+        }
+
+        if (days.length === 0) {
+            previewEl.textContent = 'Select days and time above';
+            previewEl.classList.add('empty');
+            hiddenEl.value = '';
+            return;
+        }
+
+        // Format days string: consecutive ranges shown as ranges
+        var dayStr = formatDayString(days);
+        var timeStr = formatTime12(startTime) + ' - ' + formatTime12(endTime);
+        var schedule = dayStr + ', ' + timeStr;
+
+        previewEl.textContent = schedule;
+        previewEl.classList.remove('empty');
+        hiddenEl.value = schedule;
+
+        // Trigger conflict check
+        debounceConflictCheck(prefix);
+    }
+
+    /** Format day numbers into a readable string with ranges. */
+    function formatDayString(days) {
+        if (days.length === 0) return '';
+        if (days.length === 1) return DAY_NAMES[days[0]];
+
+        // Group consecutive days into ranges
+        var ranges = [];
+        var start = days[0];
+        var end = days[0];
+        for (var i = 1; i < days.length; i++) {
+            if (days[i] === end + 1) {
+                end = days[i];
+            } else {
+                ranges.push(start === end ? DAY_NAMES[start] : DAY_NAMES[start] + '-' + DAY_NAMES[end]);
+                start = days[i];
+                end = days[i];
+            }
+        }
+        ranges.push(start === end ? DAY_NAMES[start] : DAY_NAMES[start] + '-' + DAY_NAMES[end]);
+        return ranges.join(', ');
+    }
+
+    /** Debounced AJAX conflict check. */
+    function debounceConflictCheck(prefix) {
+        if (conflictTimers[prefix]) clearTimeout(conflictTimers[prefix]);
+        conflictTimers[prefix] = setTimeout(function() {
+            checkConflicts(prefix);
+        }, 400);
+    }
+
+    /** AJAX: check for schedule conflicts against existing sections. */
+    function checkConflicts(prefix) {
+        var schedule = document.getElementById(prefix + 'ScheduleHidden').value;
+        var termEl = document.getElementById(prefix === 'add' ? 'addTermId' : 'editSecTerm');
+        var instructorEl = document.getElementById(prefix === 'add' ? 'addInstructorId' : 'editSecInstructor');
+        var blockEl = document.getElementById(prefix === 'add' ? 'addBlockId' : 'editSecBlock');
+        var roomEl = document.getElementById(prefix === 'add' ? 'addRoom' : 'editSecRoom');
+        var alertEl = document.getElementById(prefix + 'ConflictAlert');
+        var listEl = document.getElementById(prefix + 'ConflictList');
+
+        if (!schedule) {
+            alertEl.classList.remove('visible');
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('term_id', termEl.value);
+        formData.append('schedule', schedule);
+        formData.append('instructor_id', instructorEl.value);
+        formData.append('block_id', blockEl.value);
+        formData.append('room', roomEl.value);
+        if (prefix === 'edit') {
+            formData.append('exclude_id', document.getElementById('editSecId').value);
+        }
+
+        fetch('api/check-conflicts.php', { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok && data.conflicts.length > 0) {
+                    listEl.innerHTML = '';
+                    data.conflicts.forEach(function(c) {
+                        var li = document.createElement('li');
+                        li.textContent = c.message;
+                        listEl.appendChild(li);
+                    });
+                    alertEl.classList.add('visible');
+                } else {
+                    alertEl.classList.remove('visible');
+                }
+            })
+            .catch(function() {
+                alertEl.classList.remove('visible');
+            });
+    }
+
+    /** Validate room field on input. */
+    function checkRoomConflict(prefix) {
+        debounceConflictCheck(prefix);
+    }
+
+    // =====================================================
+    // Form submission: build schedule string from picker
+    // =====================================================
+    function validateScheduleForm(prefix) {
+        var days = getSelectedDays(prefix);
+        var startEl = document.getElementById(prefix + 'StartTime');
+        var endEl = document.getElementById(prefix + 'EndTime');
+        var hiddenEl = document.getElementById(prefix + 'ScheduleHidden');
+        var dayErrorEl = document.getElementById(prefix + 'DayError');
+        var timeValEl = document.getElementById(prefix + 'TimeValidation');
+
+        var valid = true;
+
+        if (days.length === 0) {
+            dayErrorEl.classList.add('visible');
+            valid = false;
+        } else {
+            dayErrorEl.classList.remove('visible');
+        }
+
+        if (startEl.value >= endEl.value) {
+            timeValEl.classList.add('visible');
+            valid = false;
+        } else {
+            timeValEl.classList.remove('visible');
+        }
+
+        if (valid) {
+            updateSchedulePreview(prefix);
+        }
+
+        return valid;
+    }
+
+    document.getElementById('addBlockForm').addEventListener('submit', function(e) {
+        if (!validateScheduleForm('add')) {
+            e.preventDefault();
+        }
+    });
+    document.getElementById('editBlockForm').addEventListener('submit', function(e) {
+        if (!validateScheduleForm('edit')) {
+            e.preventDefault();
+        }
+    });
+
+    // =====================================================
+    // View Block modal (enhanced schedule display)
+    // =====================================================
     function viewBlock(btn) {
         document.getElementById('viewBlockCode').textContent = btn.dataset.blockCode;
         document.getElementById('viewSecClassBlock').textContent = btn.dataset.classBlock || '—';
@@ -588,6 +958,58 @@ displayFlash();
         document.getElementById('viewBlockModal').style.display = 'block';
     }
 
+    // =====================================================
+    // Edit Block: parse existing schedule into picker
+    // =====================================================
+    function parseScheduleString(str) {
+        if (!str) return null;
+        var result = { days: [], startTime: '08:00', endTime: '09:30' };
+
+        // Extract time range: "HH:MM AM/PM - HH:MM AM/PM"
+        var timeMatch = str.match(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM)?)/i);
+        if (timeMatch) {
+            result.startTime = convertTo24h(timeMatch[1].trim());
+            result.endTime = convertTo24h(timeMatch[2].trim());
+        }
+
+        // Extract days: everything before the comma/first digit
+        var dayPart = str.split(/,\s*/)[0].trim();
+        // Handle ranges like "Mon-Wed" and "Mon, Wed, Fri"
+        var segments = dayPart.split(/[\s,]+/);
+        segments.forEach(function(seg) {
+            seg = seg.trim();
+            if (seg.indexOf('-') !== -1) {
+                // Range like "Mon-Wed" or "Mon-Fri"
+                var rangeParts = seg.split('-');
+                var startIdx = DAY_NAMES.indexOf(rangeParts[0]);
+                var endIdx = DAY_NAMES.indexOf(rangeParts[1]);
+                if (startIdx !== -1 && endIdx !== -1) {
+                    for (var i = Math.min(startIdx, endIdx); i <= Math.max(startIdx, endIdx); i++) {
+                        if (result.days.indexOf(i) === -1) result.days.push(i);
+                    }
+                }
+            } else {
+                var idx = DAY_NAMES.indexOf(seg);
+                if (idx !== -1 && result.days.indexOf(idx) === -1) {
+                    result.days.push(idx);
+                }
+            }
+        });
+
+        return result;
+    }
+
+    function convertTo24h(timeStr) {
+        var match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+        if (!match) return '08:00';
+        var h = parseInt(match[1]);
+        var m = match[2];
+        var suffix = match[3] ? match[3].toUpperCase() : '';
+        if (suffix === 'PM' && h < 12) h += 12;
+        if (suffix === 'AM' && h === 12) h = 0;
+        return (h < 10 ? '0' : '') + h + ':' + m;
+    }
+
     function editBlock(btn) {
         document.getElementById('editSecId').value = btn.dataset.id;
         document.getElementById('editSecSubject').value = btn.dataset.subjectId;
@@ -596,12 +1018,45 @@ displayFlash();
         document.getElementById('editSecBlock').value = btn.dataset.blockId || '';
         document.getElementById('editBlockCode').value = btn.dataset.blockCode;
         document.getElementById('editSecRoom').value = btn.dataset.room || '';
-        document.getElementById('editSecSchedule').value = btn.dataset.schedule || '';
         document.getElementById('editSecCapacity').value = btn.dataset.capacity || '';
         document.getElementById('editSecStatus').value = btn.dataset.status;
+
+        // Parse existing schedule into the picker
+        var scheduleStr = btn.dataset.schedule || '';
+        var parsed = parseScheduleString(scheduleStr);
+
+        // Reset all day chips
+        document.getElementById('editDayChips').querySelectorAll('.day-chip').forEach(function(chip) {
+            chip.classList.remove('selected');
+        });
+
+        if (parsed && parsed.days.length > 0) {
+            // Select the matching day chips
+            parsed.days.forEach(function(d) {
+                var chip = document.querySelector('#editDayChips .day-chip[data-day="' + d + '"]');
+                if (chip) chip.classList.add('selected');
+            });
+            document.getElementById('editStartTime').value = parsed.startTime;
+            document.getElementById('editEndTime').value = parsed.endTime;
+        }
+
+        // Set hidden field
+        document.getElementById('editScheduleHidden').value = scheduleStr;
+
+        // Update preview
+        updateSchedulePreview('edit');
+
+        // Hide conflict alerts
+        document.getElementById('editConflictAlert').classList.remove('visible');
+        document.getElementById('editDayError').classList.remove('visible');
+        document.getElementById('editTimeValidation').classList.remove('visible');
+
         document.getElementById('editBlockModal').style.display = 'block';
     }
 
+    // =====================================================
+    // Modal overlay close
+    // =====================================================
     ['addBlockModal', 'addTermModal', 'viewBlockModal', 'editBlockModal'].forEach(function(id) {
         document.getElementById(id).addEventListener('click', function(e) {
             if (e.target === this) {
@@ -609,6 +1064,24 @@ displayFlash();
             }
         });
     });
+
+    // Reset add modal state when opened
+    document.querySelector('[onclick="document.getElementById(\'addBlockModal\').style.display=\'block\'"]')
+        .addEventListener('click', function() {
+            // Reset day chips
+            document.getElementById('addDayChips').querySelectorAll('.day-chip').forEach(function(chip) {
+                chip.classList.remove('selected');
+            });
+            document.getElementById('addStartTime').value = '08:00';
+            document.getElementById('addEndTime').value = '09:30';
+            document.getElementById('addScheduleHidden').value = '';
+            document.getElementById('addSchedulePreview').textContent = 'Select days and time above';
+            document.getElementById('addSchedulePreview').classList.add('empty');
+            document.getElementById('addConflictAlert').classList.remove('visible');
+            document.getElementById('addDayError').classList.remove('visible');
+            document.getElementById('addTimeValidation').classList.remove('visible');
+            document.getElementById('addRoomConflict').classList.remove('visible');
+        });
 </script>
 
 <?php include '../includes/footer.php'; ?>
