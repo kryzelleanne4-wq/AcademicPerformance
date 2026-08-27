@@ -213,7 +213,7 @@ displayFlash();
                 <input type="hidden" name="section_id" value="<?php echo $sectionId; ?>">
                 <input type="hidden" name="date" value="<?php echo htmlspecialchars($date); ?>">
 
-                <table>
+                <table data-pagination data-page-size="8">
                     <thead>
                         <tr>
                             <th>Student ID</th>

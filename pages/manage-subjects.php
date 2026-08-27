@@ -113,7 +113,7 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addSubjectModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Subject</button>
         </div>
 
-        <table>
+        <table data-pagination data-page-size="8">
             <thead>
                 <tr>
                     <th>Code</th>

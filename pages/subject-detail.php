@@ -68,7 +68,7 @@ displayFlash();
         <a href="subjects.php" class="btn btn-secondary">← Back to Subjects</a>
     </div>
 
-    <table>
+    <table data-pagination data-page-size="8">
         <thead>
             <tr>
                 <?php if ($user['role'] !== 'student'): ?>

@@ -147,12 +147,12 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('enrollModal').style.display='block'"><?php echo icon('plus', 14); ?> Enroll Students</button>
         </div>
 
-        <table>
+        <table data-pagination data-page-size="8">
             <thead>
                 <tr>
                     <th>Student</th>
                     <th>Subject</th>
-                    <th>Section</th>
+                    <th>Block</th>
                     <th>Schedule</th>
                     <th>Term</th>
                     <th>Status</th>
@@ -165,7 +165,7 @@ displayFlash();
                 <tr>
                     <td data-label="Student"><?php echo htmlspecialchars($enrollment['student_id'] . ' - ' . $enrollment['first_name'] . ' ' . $enrollment['last_name']); ?></td>
                     <td data-label="Subject"><?php echo htmlspecialchars($enrollment['subject_code'] . ' - ' . $enrollment['subject_name']); ?></td>
-                    <td data-label="Section"><code><?php echo htmlspecialchars($enrollment['section_code']); ?></code></td>
+                    <td data-label="Block"><code><?php echo htmlspecialchars($enrollment['section_code']); ?></code></td>
                     <td data-label="Schedule"><?php echo htmlspecialchars($enrollment['schedule'] ?? '—'); ?></td>
                     <td data-label="Term"><?php echo htmlspecialchars($enrollment['term_name'] . ' ' . $enrollment['academic_year']); ?></td>
                     <td data-label="Status">
@@ -216,9 +216,9 @@ displayFlash();
             <input type="hidden" name="action" value="enroll">
 
             <div class="form-group">
-                <label>Section</label>
+                <label>Block</label>
                 <select name="section_id" class="form-control" required>
-                    <option value="">-- Select Section --</option>
+                    <option value="">-- Select Block --</option>
                     <?php foreach ($sections as $section): ?>
                     <option value="<?php echo $section['id']; ?>">
                         <?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name'] . ' (' . $section['section_code'] . ') — ' . $section['first_name'] . ' ' . $section['last_name']); ?>

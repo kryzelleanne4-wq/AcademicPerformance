@@ -427,9 +427,9 @@ displayFlash();
         <div style="padding: 24px; border-bottom: 1px solid var(--outline-soft);">
             <form method="GET" class="form-row" style="align-items: flex-end;">
                 <div class="form-group" style="flex: 2;">
-                    <label>Section / Subject</label>
+                    <label>Block / Subject</label>
                     <select name="section_id" class="form-control" required>
-                        <option value="">-- Select Section --</option>
+                        <option value="">-- Select Block --</option>
                         <?php foreach ($sections as $section): ?>
                         <option value="<?php echo $section['id']; ?>" <?php echo (int) $section['id'] === $sectionId ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name'] . ' (' . $section['section_code'] . ') — ' . $section['first_name'] . ' ' . $section['last_name']); ?>
@@ -543,12 +543,12 @@ displayFlash();
             <h2><?php echo icon('file-text', 24); ?> Recorded Grades</h2>
             <a href="?section_id=<?php echo $sectionId ? $sectionId : ''; ?>&export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export Score Sheet</a>
         </div>
-        <table>
+        <table data-pagination data-page-size="8">
             <thead>
                 <tr>
                     <th>Student</th>
                     <th>Subject</th>
-                    <th>Section</th>
+                    <th>Block</th>
                     <th>Semester</th>
                     <th>Year</th>
                     <th>Overall (%)</th>
@@ -560,7 +560,7 @@ displayFlash();
                 <tr>
                     <td data-label="Student"><?php echo htmlspecialchars($grade['student_number'] . ' - ' . $grade['first_name'] . ' ' . $grade['last_name']); ?></td>
                     <td data-label="Subject"><?php echo htmlspecialchars($grade['subject_code'] . ' - ' . $grade['subject_name']); ?></td>
-                    <td data-label="Section"><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
+                    <td data-label="Block"><?php echo htmlspecialchars($grade['section_code'] ?? '—'); ?></td>
                     <td data-label="Semester"><?php echo htmlspecialchars($grade['semester']); ?></td>
                     <td data-label="Year"><?php echo $grade['year']; ?></td>
                     <td data-label="Overall (%)"><?php echo $grade['score'] ?? '—'; ?></td>

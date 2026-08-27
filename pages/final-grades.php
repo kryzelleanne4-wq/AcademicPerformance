@@ -62,7 +62,7 @@ displayFlash();
         <h2><?php echo icon('trophy', 24); ?> Final Grades</h2>
     </div>
     
-    <table>
+    <table data-pagination data-page-size="8">
         <thead>
             <tr>
                 <th>Student ID</th>

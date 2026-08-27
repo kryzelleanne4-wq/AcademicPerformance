@@ -112,7 +112,7 @@ displayFlash();
         <a href="?export=excel" class="btn btn-secondary btn-sm"><?php echo icon('download', 14); ?> Export to Excel</a>
     </div>
 
-    <table>
+    <table data-pagination data-page-size="8">
         <thead>
             <tr>
                 <th>Subject Code</th>

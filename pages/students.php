@@ -117,7 +117,7 @@ include '../includes/header.php';
                 <div class="alert alert-error"><?php echo $message; ?></div>
             <?php endif; ?>
             
-            <table>
+            <table data-pagination data-page-size="8">
                 <thead>
                     <tr>
                         <th>Student ID</th>

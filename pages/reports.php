@@ -48,7 +48,7 @@ include '../includes/header.php';
                 <h2><?php echo icon('bar-chart', 24); ?> Student Performance Summary</h2>
             </div>
             
-            <table>
+            <table data-pagination data-page-size="8">
                 <thead>
                     <tr>
                         <th>Student ID</th>

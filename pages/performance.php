@@ -59,7 +59,7 @@ displayFlash();
         <h2><?php echo icon('trending-up', 24); ?> Performance Overview</h2>
     </div>
     
-    <table>
+    <table data-pagination data-page-size="8">
         <thead>
             <tr>
                 <th>Student ID</th>

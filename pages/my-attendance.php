@@ -145,7 +145,7 @@ displayFlash();
         </div>
     </div>
 
-    <table>
+    <table data-pagination data-page-size="8">
         <thead>
             <tr>
                 <th>Date</th>

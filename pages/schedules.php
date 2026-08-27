@@ -1,7 +1,7 @@
 <?php
 /**
  * Schedules Management Page (Admin only)
- * Course sections carry the schedule (days/time), room, instructor, term.
+ * Course blocks carry the schedule (days/time), room, instructor, term.
  */
 
 require_once '../includes/functions.php';
@@ -51,17 +51,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit();
             break;
 
-        case 'add_section':
+        case 'add_block':
             $subject_id = intval($_POST['subject_id'] ?? 0);
             $instructor_id = intval($_POST['instructor_id'] ?? 0);
             $term_id = intval($_POST['term_id'] ?? 0);
-            $section_code = sanitize($_POST['section_code'] ?? '');
+            $block_code = sanitize($_POST['block_code'] ?? '');
             $room = sanitize($_POST['room'] ?? '');
             $schedule = sanitize($_POST['schedule'] ?? '');
             $capacity = intval($_POST['capacity'] ?? 0);
 
-            if (!$subject_id || !$instructor_id || !$term_id || $section_code === '') {
-                setFlash('Subject, instructor, term and section code are required.', 'error');
+            if (!$subject_id || !$instructor_id || !$term_id || $block_code === '') {
+                setFlash('Subject, instructor, term and block are required.', 'error');
             } else {
                 try {
                     $stmt = $db->prepare("INSERT INTO course_sections (subject_id, instructor_id, term_id, section_code, room, schedule, capacity) VALUES (:s, :i, :t, :c, :r, :sch, :cap)");
@@ -69,7 +69,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         ':s'   => $subject_id,
                         ':i'   => $instructor_id,
                         ':t'   => $term_id,
-                        ':c'   => $section_code,
+                        ':c'   => $block_code,
                         ':r'   => $room ?: null,
                         ':sch' => $schedule ?: null,
                         ':cap' => $capacity ?: null
@@ -83,12 +83,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit();
             break;
 
-        case 'update_section':
+        case 'update_block':
             $id = intval($_POST['id'] ?? 0);
             $subject_id = intval($_POST['subject_id'] ?? 0);
             $instructor_id = intval($_POST['instructor_id'] ?? 0);
             $term_id = intval($_POST['term_id'] ?? 0);
-            $section_code = sanitize($_POST['section_code'] ?? '');
+            $block_code = sanitize($_POST['block_code'] ?? '');
             $room = sanitize($_POST['room'] ?? '');
             $schedule = sanitize($_POST['schedule'] ?? '');
             $capacity = intval($_POST['capacity'] ?? 0);
@@ -99,8 +99,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $status = 'Open';
             }
 
-            if (!$id || !$subject_id || !$instructor_id || !$term_id || $section_code === '') {
-                setFlash('Subject, instructor, term and section code are required.', 'error');
+            if (!$id || !$subject_id || !$instructor_id || !$term_id || $block_code === '') {
+                setFlash('Subject, instructor, term and block are required.', 'error');
             } else {
                 try {
                     $stmt = $db->prepare("UPDATE course_sections SET subject_id = :s, instructor_id = :i, term_id = :t, section_code = :c, room = :r, schedule = :sch, capacity = :cap, status = :st, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
@@ -108,7 +108,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         ':s'   => $subject_id,
                         ':i'   => $instructor_id,
                         ':t'   => $term_id,
-                        ':c'   => $section_code,
+                        ':c'   => $block_code,
                         ':r'   => $room ?: null,
                         ':sch' => $schedule ?: null,
                         ':cap' => $capacity ?: null,
@@ -124,7 +124,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit();
             break;
 
-        case 'delete_section':
+        case 'delete_block':
             $id = intval($_POST['id'] ?? 0);
             try {
                 $db->prepare("DELETE FROM course_sections WHERE id = :id")->execute([':id' => $id]);
@@ -145,7 +145,7 @@ $instructors = $db->query("SELECT * FROM instructors WHERE status = 'Active' ORD
 $sections = $db->query("
     SELECT cs.*, sub.subject_code, sub.subject_name, ins.first_name, ins.last_name,
            t.term_name, t.academic_year,
-           (SELECT COUNT(*) FROM enrollments e WHERE e.section_id = cs.id AND e.status = 'Enrolled') AS enrolled_count
+           (SELECT COUNT(*) FROM enrollments e WHERE e.block_id = cs.id AND e.status = 'Enrolled') AS enrolled_count
     FROM course_sections cs
     JOIN subjects sub ON cs.subject_id = sub.id
     JOIN instructors ins ON cs.instructor_id = ins.id
@@ -161,17 +161,17 @@ displayFlash();
 <main>
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2><?php echo icon('calendar', 24); ?> Class Schedules</h2>
+            <h2><?php echo icon('calendar', 24); ?> Class Blocks</h2>
             <div style="display: flex; gap: 8px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('addTermModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Term</button>
-                <button class="btn btn-primary" onclick="document.getElementById('addSectionModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Schedule</button>
+                <button class="btn btn-primary" onclick="document.getElementById('addBlockModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Block</button>
             </div>
         </div>
 
-        <table>
+        <table data-pagination data-page-size="8">
             <thead>
                 <tr>
-                    <th>Section</th>
+                    <th>Block</th>
                     <th>Subject</th>
                     <th>Instructor</th>
                     <th>Term</th>
@@ -186,7 +186,7 @@ displayFlash();
             <tbody>
                 <?php foreach ($sections as $section): ?>
                 <tr>
-                    <td data-label="Section"><code><?php echo htmlspecialchars($section['section_code']); ?></code></td>
+                    <td data-label="Block"><code><?php echo htmlspecialchars($section['block_code']); ?></code></td>
                     <td data-label="Subject"><?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name']); ?></td>
                     <td data-label="Instructor"><?php echo htmlspecialchars($section['first_name'] . ' ' . $section['last_name']); ?></td>
                     <td data-label="Term"><?php echo htmlspecialchars($section['term_name'] . ' ' . $section['academic_year']); ?></td>
@@ -202,7 +202,7 @@ displayFlash();
                     <td data-label="Actions">
                         <button type="button" class="btn btn-secondary btn-sm"
                                 data-id="<?php echo $section['id']; ?>"
-                                data-section-code="<?php echo htmlspecialchars($section['section_code'], ENT_QUOTES); ?>"
+                                data-block-code="<?php echo htmlspecialchars($section['block_code'], ENT_QUOTES); ?>"
                                 data-subject="<?php echo htmlspecialchars($section['subject_code'] . ' - ' . $section['subject_name'], ENT_QUOTES); ?>"
                                 data-instructor="<?php echo htmlspecialchars($section['first_name'] . ' ' . $section['last_name'], ENT_QUOTES); ?>"
                                 data-term="<?php echo htmlspecialchars($section['term_name'] . ' ' . $section['academic_year'], ENT_QUOTES); ?>"
@@ -211,20 +211,20 @@ displayFlash();
                                 data-capacity="<?php echo $section['capacity'] ?: ''; ?>"
                                 data-status="<?php echo htmlspecialchars($section['status'], ENT_QUOTES); ?>"
                                 data-enrolled="<?php echo $section['enrolled_count']; ?>"
-                                onclick="viewSection(this)">View</button>
+                                onclick="viewBlock(this)">View</button>
                         <button type="button" class="btn btn-secondary btn-sm"
                                 data-id="<?php echo $section['id']; ?>"
                                 data-subject-id="<?php echo (int) $section['subject_id']; ?>"
                                 data-instructor-id="<?php echo (int) $section['instructor_id']; ?>"
                                 data-term-id="<?php echo (int) $section['term_id']; ?>"
-                                data-section-code="<?php echo htmlspecialchars($section['section_code'], ENT_QUOTES); ?>"
+                                data-block-code="<?php echo htmlspecialchars($section['block_code'], ENT_QUOTES); ?>"
                                 data-room="<?php echo htmlspecialchars($section['room'] ?? '', ENT_QUOTES); ?>"
                                 data-schedule="<?php echo htmlspecialchars($section['schedule'] ?? '', ENT_QUOTES); ?>"
                                 data-capacity="<?php echo $section['capacity'] ?: ''; ?>"
                                 data-status="<?php echo htmlspecialchars($section['status'], ENT_QUOTES); ?>"
-                                onclick="editSection(this)">Edit</button>
-                        <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this schedule?')">
-                            <input type="hidden" name="action" value="delete_section">
+                                onclick="editBlock(this)">Edit</button>
+                        <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this block?')">
+                            <input type="hidden" name="action" value="delete_block">
                             <input type="hidden" name="id" value="<?php echo $section['id']; ?>">
                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
@@ -236,12 +236,12 @@ displayFlash();
     </div>
 </main>
 
-<!-- Add Schedule Modal -->
-<div id="addSectionModal" class="modal-overlay" style="display: none;">
+<!-- Add Block Modal -->
+<div id="addBlockModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
-        <h2>Add Class Schedule</h2>
+        <h2>Add Class Block</h2>
         <form method="POST">
-            <input type="hidden" name="action" value="add_section">
+            <input type="hidden" name="action" value="add_block">
 
             <div class="form-row">
                 <div class="form-group">
@@ -256,8 +256,8 @@ displayFlash();
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Section Code</label>
-                    <input type="text" name="section_code" class="form-control" placeholder="e.g. A" required>
+                    <label>Block</label>
+                    <input type="text" name="block_code" class="form-control" placeholder="e.g. A" required>
                 </div>
             </div>
 
@@ -303,18 +303,18 @@ displayFlash();
 
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                 <button type="submit" class="btn btn-success">Save Schedule</button>
-                <button type="button" class="btn btn-danger" onclick="document.getElementById('addSectionModal').style.display='none'">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('addBlockModal').style.display='none'">Cancel</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- View Schedule Modal -->
-<div id="viewSectionModal" class="modal-overlay" style="display: none;">
+<!-- View Block Modal -->
+<div id="viewBlockModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
-        <h2><?php echo icon('calendar', 20); ?> Schedule Details</h2>
+        <h2><?php echo icon('calendar', 20); ?> Block Details</h2>
         <div class="detail-list">
-            <div class="detail-row"><span class="detail-label">Section</span><span class="detail-value" id="viewSecCode"></span></div>
+            <div class="detail-row"><span class="detail-label">Block</span><span class="detail-value" id="viewBlockCode"></span></div>
             <div class="detail-row"><span class="detail-label">Subject</span><span class="detail-value" id="viewSecSubject"></span></div>
             <div class="detail-row"><span class="detail-label">Instructor</span><span class="detail-value" id="viewSecInstructor"></span></div>
             <div class="detail-row"><span class="detail-label">Term</span><span class="detail-value" id="viewSecTerm"></span></div>
@@ -325,17 +325,17 @@ displayFlash();
             <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="viewSecStatus"></span></div>
         </div>
         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('viewSectionModal').style.display='none'">Close</button>
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('viewBlockModal').style.display='none'">Close</button>
         </div>
     </div>
 </div>
 
-<!-- Edit Schedule Modal -->
-<div id="editSectionModal" class="modal-overlay" style="display: none;">
+<!-- Edit Block Modal -->
+<div id="editBlockModal" class="modal-overlay" style="display: none;">
     <div class="modal-box">
         <h2><?php echo icon('pen-line', 20); ?> Edit Schedule</h2>
         <form method="POST">
-            <input type="hidden" name="action" value="update_section">
+            <input type="hidden" name="action" value="update_block">
             <input type="hidden" name="id" id="editSecId">
 
             <div class="form-row">
@@ -350,8 +350,8 @@ displayFlash();
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Section Code</label>
-                    <input type="text" name="section_code" id="editSecCode" class="form-control" required>
+                    <label>Block</label>
+                    <input type="text" name="block_code" id="editBlockCode" class="form-control" required>
                 </div>
             </div>
 
@@ -406,7 +406,7 @@ displayFlash();
 
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                 <button type="submit" class="btn btn-success">Save Changes</button>
-                <button type="button" class="btn btn-danger" onclick="document.getElementById('editSectionModal').style.display='none'">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('editBlockModal').style.display='none'">Cancel</button>
             </div>
         </form>
     </div>
@@ -457,8 +457,8 @@ displayFlash();
 </div>
 
 <script>
-    function viewSection(btn) {
-        document.getElementById('viewSecCode').textContent = btn.dataset.sectionCode;
+    function viewBlock(btn) {
+        document.getElementById('viewBlockCode').textContent = btn.dataset.blockCode;
         document.getElementById('viewSecSubject').textContent = btn.dataset.subject;
         document.getElementById('viewSecInstructor').textContent = btn.dataset.instructor;
         document.getElementById('viewSecTerm').textContent = btn.dataset.term;
@@ -467,23 +467,23 @@ displayFlash();
         document.getElementById('viewSecCapacity').textContent = btn.dataset.capacity || '—';
         document.getElementById('viewSecEnrolled').textContent = btn.dataset.enrolled;
         document.getElementById('viewSecStatus').textContent = btn.dataset.status;
-        document.getElementById('viewSectionModal').style.display = 'block';
+        document.getElementById('viewBlockModal').style.display = 'block';
     }
 
-    function editSection(btn) {
+    function editBlock(btn) {
         document.getElementById('editSecId').value = btn.dataset.id;
         document.getElementById('editSecSubject').value = btn.dataset.subjectId;
         document.getElementById('editSecInstructor').value = btn.dataset.instructorId;
         document.getElementById('editSecTerm').value = btn.dataset.termId;
-        document.getElementById('editSecCode').value = btn.dataset.sectionCode;
+        document.getElementById('editBlockCode').value = btn.dataset.blockCode;
         document.getElementById('editSecRoom').value = btn.dataset.room || '';
         document.getElementById('editSecSchedule').value = btn.dataset.schedule || '';
         document.getElementById('editSecCapacity').value = btn.dataset.capacity || '';
         document.getElementById('editSecStatus').value = btn.dataset.status;
-        document.getElementById('editSectionModal').style.display = 'block';
+        document.getElementById('editBlockModal').style.display = 'block';
     }
 
-    ['addSectionModal', 'addTermModal', 'viewSectionModal', 'editSectionModal'].forEach(function(id) {
+    ['addBlockModal', 'addTermModal', 'viewBlockModal', 'editBlockModal'].forEach(function(id) {
         document.getElementById(id).addEventListener('click', function(e) {
             if (e.target === this) {
                 this.style.display = 'none';

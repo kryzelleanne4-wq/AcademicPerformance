@@ -88,7 +88,7 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addDeptModal').style.display='block'"><?php echo icon('plus', 14); ?> Add Department</button>
         </div>
 
-        <table>
+        <table data-pagination data-page-size="8">
             <thead>
                 <tr>
                     <th>Code</th>

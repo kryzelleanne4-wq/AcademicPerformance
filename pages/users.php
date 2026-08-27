@@ -143,7 +143,7 @@ displayFlash();
             <button class="btn btn-primary" onclick="document.getElementById('addUserModal').style.display='block'"><?php echo icon('plus', 14); ?> Add User</button>
         </div>
 
-        <table>
+        <table data-pagination data-page-size="8">
             <thead>
                 <tr>
                     <th>Login ID</th>
