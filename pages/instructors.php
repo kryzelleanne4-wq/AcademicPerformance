@@ -201,7 +201,7 @@ displayFlash();
 
         <div class="table-search-bar">
             <div class="table-search-wrapper">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"><?php echo icon('search', 16); ?></span>
                 <input type="text" id="instructorSearch" placeholder="Search by name, ID, department, email...">
             </div>
             <span class="search-count"></span>
@@ -507,7 +507,6 @@ displayFlash();
         });
     });
 
-    initTableSearch('instructorSearch', 'instructorTable');
 </script>
 
 <?php include '../includes/footer.php'; ?>

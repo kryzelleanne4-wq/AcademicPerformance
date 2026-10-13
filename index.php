@@ -69,13 +69,18 @@ $iconClass = "
 $subjects = [];
 if ($role === 'student') {
     $stmt = $db->prepare("
-        SELECT s.subject_name, s.subject_code, cs.section_code, cs.schedule,
-               ins.first_name, ins.last_name,
-               $iconClass AS icon_class, s.id
+        SELECT s.subject_name, s.subject_code, s.id,
+               $iconClass AS icon_class,
+               cs.id AS section_id, cs.section_code, cs.schedule, cs.room,
+               r.floor AS room_floor,
+               d.department_code, d.department_name,
+               ins.first_name, ins.last_name
         FROM enrollments e
         JOIN course_sections cs ON e.section_id = cs.id
         JOIN subjects s ON cs.subject_id = s.id
         JOIN instructors ins ON cs.instructor_id = ins.id
+        LEFT JOIN departments d ON s.department_id = d.id
+        LEFT JOIN rooms r ON r.room_code = cs.room
         WHERE e.student_id = :sid AND e.status = 'Enrolled'
         ORDER BY s.subject_name
     ");
@@ -84,12 +89,17 @@ if ($role === 'student') {
 } elseif ($role === 'instructor') {
     $instructor = currentInstructor();
     $stmt = $db->prepare("
-        SELECT s.subject_name, s.subject_code, cs.section_code, cs.schedule,
-               ins.first_name, ins.last_name,
-               $iconClass AS icon_class, s.id
+        SELECT s.subject_name, s.subject_code, s.id,
+               $iconClass AS icon_class,
+               cs.id AS section_id, cs.section_code, cs.schedule, cs.room,
+               r.floor AS room_floor,
+               d.department_code, d.department_name,
+               ins.first_name, ins.last_name
         FROM course_sections cs
         JOIN subjects s ON cs.subject_id = s.id
         JOIN instructors ins ON cs.instructor_id = ins.id
+        LEFT JOIN departments d ON s.department_id = d.id
+        LEFT JOIN rooms r ON r.room_code = cs.room
         WHERE cs.instructor_id = :iid
         ORDER BY s.subject_name
     ");
@@ -97,10 +107,15 @@ if ($role === 'student') {
     $subjects = $stmt->fetchAll();
 } else {
     $subjects = $db->query("
-        SELECT s.subject_name, s.subject_code, NULL AS section_code, NULL AS schedule,
-               NULL AS first_name, NULL AS last_name,
-               $iconClass AS icon_class, s.id
-        FROM subjects s WHERE s.is_active = 1
+        SELECT s.subject_name, s.subject_code, s.id,
+               $iconClass AS icon_class,
+               NULL AS section_id, NULL AS section_code, NULL AS schedule,
+               NULL AS room, NULL AS room_floor,
+               d.department_code, d.department_name,
+               NULL AS first_name, NULL AS last_name
+        FROM subjects s
+        LEFT JOIN departments d ON s.department_id = d.id
+        WHERE s.is_active = 1
         ORDER BY s.subject_name
     ")->fetchAll();
 }
@@ -133,31 +148,7 @@ displayFlash();
     <?php endif; ?>
 
     <?php foreach ($subjects as $subject): ?>
-    <div class="subject-card">
-        <div class="subject-card-icon <?php echo $subject['icon_class']; ?>">
-            <?php echo icon(subjectIcon($subject['icon_class']), 40); ?>
-        </div>
-        <div class="subject-card-body">
-            <h3 class="subject-card-title"><?php echo htmlspecialchars($subject['subject_name']); ?></h3>
-            <p class="subject-card-section">
-                <?php echo htmlspecialchars($subject['subject_code']); ?>
-                <?php if ($subject['section_code']): ?>
-                    &middot; Section <?php echo htmlspecialchars($subject['section_code']); ?>
-                <?php endif; ?>
-            </p>
-            <p class="subject-card-professor">
-                <?php if ($subject['first_name']): ?>
-                    <?php echo htmlspecialchars('Prof. ' . $subject['first_name'] . ' ' . $subject['last_name']); ?>
-                    <?php if ($subject['schedule']): ?>
-                        <br><?php echo htmlspecialchars($subject['schedule']); ?>
-                    <?php endif; ?>
-                <?php else: ?>
-                    Instructor assigned via schedule
-                <?php endif; ?>
-            </p>
-            <a href="pages/subject-detail.php?id=<?php echo $subject['id']; ?>" class="subject-card-link">GO TO COURSE</a>
-        </div>
-    </div>
+        <?php include 'includes/subject-card.php'; ?>
     <?php endforeach; ?>
 </div>
 

@@ -267,6 +267,17 @@ function blockLabel($departmentCode, $yearLevel, $blockCode, $blockName = null) 
     return $departmentCode . ' - ' . yearOrdinal($yearLevel) . ' Year - Block ' . $blockCode;
 }
 
+// Floors a room can sit on (Rooms page + room dropdowns).
+function floorOptions() {
+    return ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor', '5th Floor'];
+}
+
+// Position of a floor label, so rooms can be grouped/ordered by building level.
+function floorSortIndex($floor) {
+    $index = array_search($floor, floorOptions(), true);
+    return $index === false ? count(floorOptions()) : $index;
+}
+
 // Reorder DB rows into a plain list of values matching $keys order,
 // ready for exportExcel.
 function pickColumns(array $rows, array $keys) {

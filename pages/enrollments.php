@@ -1040,17 +1040,20 @@ function filterEnrollments() {
     var query = searchInput.value.toLowerCase().trim();
     var statusFilter = document.getElementById('filterStatus').value;
     var termFilter = document.getElementById('filterTerm').value;
-    var rows = document.querySelectorAll('#enrollmentTable tbody tr');
-    var visible = 0;
+    var table = document.getElementById('enrollmentTable');
 
-    rows.forEach(function(row) {
-        var matchSearch = !query || row.dataset.search.indexOf(query) !== -1;
+    table.querySelectorAll('tbody tr').forEach(function(row) {
+        if (row.classList.contains('table-empty-row')) return;
+        var searchable = row.dataset.search || '';
+        var matchSearch = !query || searchable.indexOf(query) !== -1;
         var matchStatus = !statusFilter || row.dataset.status === statusFilter;
         var matchTerm = !termFilter || row.dataset.term === termFilter;
-        var show = matchSearch && matchStatus && matchTerm;
-        row.style.display = show ? '' : 'none';
-        if (show) visible++;
+        row.dataset.searchHidden = (matchSearch && matchStatus && matchTerm) ? '0' : '1';
     });
+
+    // Hand row visibility back to the shared table controller so the pager and
+    // the empty state stay in sync with these filters.
+    table.dispatchEvent(new Event('tablefilterchange'));
 }
 
 function clearFilters() {
