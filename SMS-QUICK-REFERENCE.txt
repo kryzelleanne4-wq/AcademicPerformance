@@ -1,0 +1,138 @@
+╔════════════════════════════════════════════════════════════════════╗
+║           SMS NOTIFICATION SYSTEM - QUICK REFERENCE                ║
+╚════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 1. CONFIGURE CREDENTIALS                                           │
+└────────────────────────────────────────────────────────────────────┘
+   File: sms/function/sms-service.php
+   Lines: 34-35
+   
+   Change:
+   $this->username = $username ?? 'YOUR_SMS_GATEWAY_USERNAME';
+   $this->password = $password ?? 'YOUR_SMS_GATEWAY_PASSWORD';
+   
+   To your actual SMS Gateway app credentials.
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 2. TEST YOUR SETUP                                                 │
+└────────────────────────────────────────────────────────────────────┘
+   Command: php sms/test-sms.php
+   
+   This checks if credentials are configured correctly.
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 3. SET UP AUTOMATED REMINDERS                                      │
+└────────────────────────────────────────────────────────────────────┘
+   Windows: 
+   - Run: sms/cron/setup-windows-task.bat (as administrator)
+   - Or manually create task in Task Scheduler
+   
+   Linux/Mac:
+   - crontab -e
+   - Add: 0 18 * * * php /path/to/sms/cron/schedule-reminder.php
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 4. FEATURES                                                        │
+└────────────────────────────────────────────────────────────────────┘
+   ✓ Schedule Reminders - Sent 1 day before class (automatic)
+   ✓ Grade Notifications - Sent when instructor saves grades (automatic)
+   ✓ Admin Dashboard - View logs and send test SMS
+   
+┌────────────────────────────────────────────────────────────────────┐
+│ 5. HOW IT WORKS                                                    │
+└────────────────────────────────────────────────────────────────────┘
+   Schedule Reminders:
+   - Cron job runs daily at 6:00 PM
+   - Checks tomorrow's schedule for each student
+   - Sends SMS to students with classes tomorrow
+   
+   Grade Notifications:
+   - Integrated into grades.php
+   - Automatically sends SMS when instructor saves grades
+   - Only sends to students with phone numbers
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 6. ADMIN PANEL                                                     │
+└────────────────────────────────────────────────────────────────────┘
+   URL: /pages/sms-notifications.php
+   
+   Features:
+   - View notification statistics
+   - Send test SMS
+   - Manually trigger schedule reminders
+   - View recent notification logs
+   - Clear logs
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 7. PHONE NUMBER FORMATS                                            │
+└────────────────────────────────────────────────────────────────────┘
+   Accepted formats (all converted to +639XXXXXXXXX):
+   - 9171234567
+   - 09171234567
+   - 639171234567
+   - +639171234567
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 8. MANUAL TESTING                                                  │
+└────────────────────────────────────────────────────────────────────┘
+   Test Schedule Reminders:
+   php sms/cron/schedule-reminder.php
+   
+   Test Grade Notifications:
+   1. Log in as instructor
+   2. Go to Grades page
+   3. Save grades for a section
+   4. Check flash message for SMS count
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 9. TROUBLESHOOTING                                                 │
+└────────────────────────────────────────────────────────────────────┘
+   No SMS sent?
+   ✓ Check credentials in sms/function/sms-service.php
+   ✓ Ensure SMS Gateway app is running on your phone
+   ✓ Verify phone has signal
+   ✓ Check students have valid phone numbers
+   
+   Schedule reminder not working?
+   ✓ Verify Task Scheduler task is enabled (Windows)
+   ✓ Check crontab entry (Linux/Mac)
+   ✓ Run manually to see output
+   ✓ Check schedule format contains day names
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 10. FILE LOCATIONS                                                 │
+└────────────────────────────────────────────────────────────────────┘
+   Configuration:
+   └─ sms/function/sms-service.php (PUT CREDENTIALS HERE)
+   
+   Cron Scripts:
+   ├─ sms/cron/schedule-reminder.php (Daily reminder script)
+   └─ sms/cron/setup-windows-task.bat (Windows setup helper)
+   
+   Integration:
+   └─ pages/grades.php (Grade notification integrated)
+   
+   Admin:
+   └─ pages/sms-notifications.php (Dashboard)
+   
+   Documentation:
+   ├─ SMS-SETUP-GUIDE.md (Detailed setup guide)
+   ├─ sms/README.md (Technical documentation)
+   └─ SMS-QUICK-REFERENCE.txt (This file)
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 11. EXAMPLE MESSAGES                                               │
+└────────────────────────────────────────────────────────────────────┘
+   Schedule Reminder:
+   "Hi John Doe! Reminder: You have CS101 - Programming class 
+   tomorrow. Schedule: MWF 9:00-10:00 AM. Room: Room 301. 
+   Instructor: Jane Smith"
+   
+   Grade Notification:
+   "Hi John Doe! Your grade for CS101 - Programming has been posted.
+   Grade: A. Score: 92.5%. Check your portal for details."
+
+╔════════════════════════════════════════════════════════════════════╗
+║  For detailed setup instructions, see: SMS-SETUP-GUIDE.md          ║
+╚════════════════════════════════════════════════════════════════════╝
