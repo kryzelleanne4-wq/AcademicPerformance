@@ -72,6 +72,67 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 }
                 break;
                 
+            case 'edit':
+                $id = intval($_POST['id']);
+                $first_name = sanitize($_POST['first_name']);
+                $last_name = sanitize($_POST['last_name']);
+                $email = sanitize($_POST['email']);
+                $phone = sanitize($_POST['phone']);
+                $gender = sanitize($_POST['gender']);
+                $block_id = intval($_POST['block_id'] ?? 0);
+                $student_type = ($_POST['student_type'] ?? 'Regular') === 'Irregular' ? 'Irregular' : 'Regular';
+                
+                try {
+                    $db->beginTransaction();
+                    
+                    // Update student record
+                    $stmt = $db->prepare("
+                        UPDATE students 
+                        SET first_name = :first_name, 
+                            last_name = :last_name, 
+                            email = :email, 
+                            phone = :phone, 
+                            gender = :gender, 
+                            block_id = :block_id,
+                            student_type = :student_type
+                        WHERE id = :id
+                    ");
+                    $stmt->execute([
+                        ':id'           => $id,
+                        ':first_name'   => $first_name,
+                        ':last_name'    => $last_name,
+                        ':email'        => $email ?: null,
+                        ':phone'        => $phone ?: null,
+                        ':gender'       => $gender,
+                        ':block_id'     => $block_id ?: null,
+                        ':student_type' => $student_type
+                    ]);
+                    
+                    // Update user record (full name and email)
+                    $stmt = $db->prepare("
+                        UPDATE users 
+                        SET full_name = :full_name, 
+                            email = :email
+                        WHERE id = (SELECT user_id FROM students WHERE id = :id)
+                    ");
+                    $stmt->execute([
+                        ':id'        => $id,
+                        ':full_name' => $first_name . ' ' . $last_name,
+                        ':email'     => $email ?: null
+                    ]);
+                    
+                    $db->commit();
+                    setFlash('Student information updated successfully!');
+                } catch (Exception $e) {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
+                    $message = 'Error updating student: ' . $e->getMessage();
+                }
+                header('Location: students.php');
+                exit();
+                break;
+                
             case 'toggle_status':
                 $id = intval($_POST['id']);
                 $status = sanitize($_POST['status']);
@@ -117,6 +178,14 @@ $students = $db->query("
     LEFT JOIN departments d ON b.department_id = d.id
     ORDER BY st.last_name, st.first_name
 ")->fetchAll();
+
+// Count students without phone numbers
+$activeStudentsWithoutPhone = 0;
+foreach ($students as $student) {
+    if ($student['status'] === 'Active' && (empty($student['phone']) || $student['phone'] === '')) {
+        $activeStudentsWithoutPhone++;
+    }
+}
 ?>
 
 <?php
@@ -125,6 +194,15 @@ include '../includes/header.php';
 ?>
 
 <main>
+        
+        <?php if ($activeStudentsWithoutPhone > 0): ?>
+        <div class="alert alert-warning" style="margin-bottom: 1.5rem;">
+            <strong><?php echo icon('alert-triangle', 20); ?> SMS Notification Notice:</strong>
+            <?php echo $activeStudentsWithoutPhone; ?> active student(s) don't have phone numbers.
+            They won't receive SMS notifications for schedules and grades.
+            <strong>Click "Edit" to add phone numbers.</strong>
+        </div>
+        <?php endif; ?>
         
         <div class="card">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -166,7 +244,15 @@ include '../includes/header.php';
                         <td data-label="Block"><?php echo htmlspecialchars($student['block_id'] ? blockLabel($student['department_code'], $student['block_year_level'], $student['block_code'], $student['block_name']) : '—'); ?></td>
                         <td data-label="Type"><?php echo htmlspecialchars($student['student_type'] ?? 'Regular'); ?></td>
                         <td data-label="Email"><?php echo htmlspecialchars($student['email'] ?? ''); ?></td>
-                        <td data-label="Phone"><?php echo htmlspecialchars($student['phone'] ?? ''); ?></td>
+                        <td data-label="Phone">
+                            <?php if (!empty($student['phone'])): ?>
+                                <?php echo htmlspecialchars($student['phone']); ?>
+                                <span style="color: green; margin-left: 5px;" title="SMS notifications enabled">✓</span>
+                            <?php else: ?>
+                                <span style="color: #999;">No phone</span>
+                                <span style="color: orange; margin-left: 5px;" title="SMS notifications disabled">⚠</span>
+                            <?php endif; ?>
+                        </td>
                         <td data-label="Gender"><?php echo htmlspecialchars($student['gender'] ?? ''); ?></td>
                         <td data-label="Status">
                             <span class="attendance-badge status-<?php echo $student['status'] === 'Active' ? 'present' : 'absent'; ?>">
@@ -174,6 +260,9 @@ include '../includes/header.php';
                             </span>
                         </td>
                         <td data-label="Actions">
+                            <button class="btn btn-primary btn-sm" onclick="openEditModal(<?php echo htmlspecialchars(json_encode($student)); ?>)">
+                                <?php echo icon('edit', 14); ?> Edit
+                            </button>
                             <form method="POST" style="display: inline;">
                                 <input type="hidden" name="action" value="toggle_status">
                                 <input type="hidden" name="id" value="<?php echo $student['id']; ?>">
@@ -197,7 +286,7 @@ include '../includes/header.php';
     </main>
     
     <!-- Add Student Modal -->
-    <div id="addStudentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div id="addStudentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
         <div style="background: white; max-width: 500px; margin: 100px auto; padding: 2rem; border-radius: 10px;">
             <h2 style="margin-bottom: 1.5rem;">Add New Student</h2>
             <form method="POST">
@@ -224,8 +313,9 @@ include '../includes/header.php';
                 </div>
                 
                 <div class="form-group">
-                    <label>Phone</label>
-                    <input type="text" name="phone" class="form-control">
+                    <label>Phone <small class="text-muted">(For SMS notifications)</small></label>
+                    <input type="text" name="phone" class="form-control" placeholder="9171234567">
+                    <small class="form-text text-muted">Format: 9XXXXXXXXX (10 digits starting with 9)</small>
                 </div>
                 
                 <div class="form-row">
@@ -266,13 +356,107 @@ include '../includes/header.php';
         </div>
     </div>
     
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="background: white; max-width: 500px; margin: 100px auto; padding: 2rem; border-radius: 10px;">
+            <h2 style="margin-bottom: 1.5rem;">Edit Student Information</h2>
+            <form method="POST" id="editStudentForm">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="id" id="edit_id">
+                
+                <div class="form-group">
+                    <label>Student ID</label>
+                    <input type="text" id="edit_student_id" class="form-control" disabled>
+                    <small class="form-text text-muted">Student ID cannot be changed</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" name="first_name" id="edit_first_name" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" name="last_name" id="edit_last_name" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" id="edit_email" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label>Phone <small class="text-muted">(For SMS notifications)</small></label>
+                    <input type="text" name="phone" id="edit_phone" class="form-control" placeholder="9171234567">
+                    <small class="form-text text-muted">Format: 9XXXXXXXXX (10 digits starting with 9)</small>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select name="gender" id="edit_gender" class="form-control">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select name="student_type" id="edit_student_type" class="form-control">
+                            <option value="Regular">Regular</option>
+                            <option value="Irregular">Irregular</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Class Block</label>
+                    <select name="block_id" id="edit_block_id" class="form-control">
+                        <option value="">-- No Block --</option>
+                        <?php foreach ($blocks as $block): ?>
+                        <option value="<?php echo $block['id']; ?>">
+                            <?php echo htmlspecialchars(blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name'])); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-success"><?php echo icon('save', 14); ?> Update Student</button>
+                    <button type="button" class="btn btn-danger" onclick="document.getElementById('editStudentModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script>
-        // Close modal when clicking outside
+        // Close modals when clicking outside
         document.getElementById('addStudentModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 this.style.display = 'none';
             }
         });
+        
+        document.getElementById('editStudentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.style.display = 'none';
+            }
+        });
+        
+        // Open edit modal and populate with student data
+        function openEditModal(student) {
+            document.getElementById('edit_id').value = student.id;
+            document.getElementById('edit_student_id').value = student.student_id;
+            document.getElementById('edit_first_name').value = student.first_name;
+            document.getElementById('edit_last_name').value = student.last_name;
+            document.getElementById('edit_email').value = student.email || '';
+            document.getElementById('edit_phone').value = student.phone || '';
+            document.getElementById('edit_gender').value = student.gender;
+            document.getElementById('edit_student_type').value = student.student_type || 'Regular';
+            document.getElementById('edit_block_id').value = student.block_id || '';
+            
+            document.getElementById('editStudentModal').style.display = 'block';
+        }
     </script>
 
 <?php include '../includes/footer.php'; ?>

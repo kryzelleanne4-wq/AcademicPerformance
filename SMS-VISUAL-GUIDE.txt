@@ -1,0 +1,325 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║           📱 SMS NOTIFICATION SYSTEM - VISUAL GUIDE 📱               ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  WHAT YOU HAVE NOW                                                 ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    ┌─────────────────────────────────────────────────────────┐
+    │  AUTOMATED SCHEDULE REMINDERS                           │
+    │  • Sends SMS 1 day before class                         │
+    │  • Runs daily at 6:00 PM automatically                  │
+    │  • Includes: subject, time, room, instructor            │
+    └─────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────┐
+    │  AUTOMATED GRADE NOTIFICATIONS                          │
+    │  • Sends SMS when instructor submits grades             │
+    │  • Automatic - no extra steps needed                    │
+    │  • Includes: subject, letter grade, percentage          │
+    └─────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────┐
+    │  ADMIN DASHBOARD                                        │
+    │  • View notification statistics                         │
+    │  • Send test SMS messages                               │
+    │  • View notification logs                               │
+    │  • URL: /pages/sms-notifications.php                    │
+    └─────────────────────────────────────────────────────────┘
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  HOW IT WORKS                                                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+SCHEDULE REMINDERS:
+═══════════════════
+
+    Every Day at 6:00 PM
+           │
+           ▼
+    ┌──────────────┐
+    │  Cron Job    │  Check tomorrow's schedule
+    │   Runs       │  for all students
+    └──────┬───────┘
+           │
+           ▼
+    ┌────────────────┐
+    │ Find Students  │  Who have classes tomorrow
+    │ with Classes   │  and have phone numbers
+    └──────┬─────────┘
+           │
+           ▼
+    ┌────────────────┐
+    │  Send SMS      │  "You have CS101 class tomorrow"
+    │  to Each       │  "Schedule: MWF 9:00-10:00 AM"
+    └──────┬─────────┘
+           │
+           ▼
+    ┌────────────────┐
+    │  Log in        │  Track which students
+    │  Database      │  were notified
+    └────────────────┘
+
+
+GRADE NOTIFICATIONS:
+═══════════════════
+
+    Instructor Saves Grades
+           │
+           ▼
+    ┌──────────────┐
+    │  Save to     │  Store grades in database
+    │  Database    │  
+    └──────┬───────┘
+           │
+           ▼
+    ┌────────────────┐
+    │ Find Students  │  Who received grades
+    │ with Grades    │  and have phone numbers
+    └──────┬─────────┘
+           │
+           ▼
+    ┌────────────────┐
+    │  Send SMS      │  "Your grade for CS101 has been posted"
+    │  to Each       │  "Grade: A, Score: 92.5%"
+    └──────┬─────────┘
+           │
+           ▼
+    ┌────────────────┐
+    │  Log in        │  Track notifications
+    │  Database      │  
+    └────────────────┘
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  WHAT YOU NEED TO DO                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+STEP 1: Configure Credentials (2 minutes)
+─────────────────────────────────────────
+
+    File: sms/function/sms-service.php
+    Lines: 34-35
+
+    BEFORE:
+    ┌─────────────────────────────────────────────────┐
+    │ $this->username = 'YOUR_SMS_GATEWAY_USERNAME';  │
+    │ $this->password = 'YOUR_SMS_GATEWAY_PASSWORD';  │
+    └─────────────────────────────────────────────────┘
+
+    AFTER:
+    ┌─────────────────────────────────────────────────┐
+    │ $this->username = 'your_actual_username';       │
+    │ $this->password = 'your_actual_password';       │
+    └─────────────────────────────────────────────────┘
+
+
+STEP 2: Test Configuration (1 minute)
+─────────────────────────────────────
+
+    Command: php sms/test-sms.php
+
+    ✓ Should show: "SMS Gateway credentials configured"
+    ✗ Should NOT show: "WARNING: credentials not configured"
+
+
+STEP 3: Set Up Automation (2 minutes)
+─────────────────────────────────────
+
+    WINDOWS:
+    ┌─────────────────────────────────────────────────┐
+    │ 1. Right-click: sms/cron/setup-windows-task.bat│
+    │ 2. Select: "Run as administrator"              │
+    │ 3. Done!                                        │
+    └─────────────────────────────────────────────────┘
+
+    OR use: SMS-QUICK-START.bat (option 3)
+
+
+STEP 4: Add Phone Numbers (Ongoing)
+───────────────────────────────────
+
+    ┌─────────────────────────────────────────────────┐
+    │ 1. Go to: Students page                         │
+    │ 2. Edit each student                            │
+    │ 3. Add phone number: 9171234567                 │
+    │ 4. Save                                         │
+    └─────────────────────────────────────────────────┘
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  EXAMPLE SMS MESSAGES                                              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+SCHEDULE REMINDER:
+─────────────────
+
+    ┌──────────────────────────────────────────────────┐
+    │ Hi John Doe! Reminder: You have CS101 -          │
+    │ Programming class tomorrow.                      │
+    │ Schedule: MWF 9:00-10:00 AM                      │
+    │ Room: Room 301                                   │
+    │ Instructor: Jane Smith                           │
+    └──────────────────────────────────────────────────┘
+
+
+GRADE NOTIFICATION:
+──────────────────
+
+    ┌──────────────────────────────────────────────────┐
+    │ Hi John Doe! Your grade for CS101 -              │
+    │ Programming has been posted.                     │
+    │ Grade: A                                         │
+    │ Score: 92.5%                                     │
+    │ Check your portal for details.                   │
+    └──────────────────────────────────────────────────┘
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  FILE LOCATIONS                                                    ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+📂 Project Root
+│
+├── 📄 SMS-SETUP-GUIDE.md .................. ⭐ START HERE
+├── 📄 SMS-QUICK-REFERENCE.txt ............. Quick commands
+├── 📄 SMS-IMPLEMENTATION-CHECKLIST.md ..... Testing guide
+├── 📄 SMS-IMPLEMENTATION-SUMMARY.md ....... What was built
+├── 📄 SMS-VISUAL-GUIDE.txt ................ This file
+├── 🔧 SMS-QUICK-START.bat ................. Interactive menu
+│
+├── 📂 sms/
+│   ├── 📂 function/
+│   │   ├── 📄 sms-service.php ............. ⭐ PUT CREDENTIALS HERE
+│   │   └── 📄 sms.php ..................... Original SMS sender
+│   │
+│   ├── 📂 cron/
+│   │   ├── 📄 schedule-reminder.php ....... Daily reminder script
+│   │   └── 🔧 setup-windows-task.bat ...... Windows task setup
+│   │
+│   ├── 📄 test-sms.php .................... Test configuration
+│   ├── 📄 README.md ....................... Technical docs
+│   └── 📄 SYSTEM-ARCHITECTURE.md .......... Architecture details
+│
+└── 📂 pages/
+    ├── 📄 sms-notifications.php ........... Admin dashboard
+    └── 📄 grades.php ...................... (Modified for SMS)
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  TESTING CHECKLIST                                                 ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    [ ] 1. SMS Gateway app installed on phone
+    [ ] 2. Got username and password from app
+    [ ] 3. Updated sms/function/sms-service.php with credentials
+    [ ] 4. Ran: php sms/test-sms.php (no warnings)
+    [ ] 5. Set up Windows Task Scheduler (or cron)
+    [ ] 6. Tested: php sms/cron/schedule-reminder.php
+    [ ] 7. Added phone numbers to at least 3 students
+    [ ] 8. Tested grade notification by saving grades
+    [ ] 9. Checked admin dashboard: /pages/sms-notifications.php
+    [ ] 10. Students confirmed receiving SMS
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  TROUBLESHOOTING                                                   ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+PROBLEM: No SMS received
+────────────────────────
+
+    Check:
+    ✓ SMS Gateway app running on phone?
+    ✓ Phone has cellular signal?
+    ✓ Credentials correct in sms-service.php?
+    ✓ Student phone number valid (9XXXXXXXXX)?
+
+    Test: php sms/test-sms.php
+
+
+PROBLEM: Schedule reminders not sent
+────────────────────────────────────
+
+    Check:
+    ✓ Task Scheduler has task enabled?
+    ✓ Schedule contains day names (MWF, Monday, etc.)?
+    ✓ Students have classes tomorrow?
+
+    Test: php sms/cron/schedule-reminder.php
+
+
+PROBLEM: Grade notifications not sent
+─────────────────────────────────────
+
+    Check:
+    ✓ Students have phone numbers?
+    ✓ Grades were actually saved?
+    ✓ Check flash message after saving
+
+    Test: Save grades for a section with phone numbers
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  QUICK COMMANDS                                                    ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    Test Configuration:
+    ═══════════════════
+    php sms/test-sms.php
+
+
+    Run Schedule Reminder:
+    ══════════════════════
+    php sms/cron/schedule-reminder.php
+
+
+    Windows Task Setup:
+    ═══════════════════
+    Right-click: sms/cron/setup-windows-task.bat
+    Select: Run as administrator
+
+
+    Interactive Menu:
+    ════════════════
+    Double-click: SMS-QUICK-START.bat
+
+
+    Admin Dashboard:
+    ═══════════════
+    Browser: /pages/sms-notifications.php
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  NEXT STEPS                                                        ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    1. Read: SMS-SETUP-GUIDE.md
+       └─> Complete step-by-step setup
+
+    2. Configure: sms/function/sms-service.php
+       └─> Add your SMS Gateway credentials
+
+    3. Test: php sms/test-sms.php
+       └─> Verify configuration works
+
+    4. Set up: Windows Task Scheduler
+       └─> Enable automatic daily reminders
+
+    5. Test: Save grades as instructor
+       └─> Verify grade notifications work
+
+    6. Monitor: /pages/sms-notifications.php
+       └─> View logs and statistics
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║  🎉 Your SMS system is ready! Just need to configure credentials! 🎉 ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
