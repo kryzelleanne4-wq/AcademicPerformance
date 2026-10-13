@@ -52,6 +52,7 @@ try {
         'attendance',
         'enrollments',
         'course_sections',
+        'rooms',
         'assessment_components',
         'students',
         'instructors',
@@ -288,6 +289,21 @@ try {
     echo "✓ Class schedules seeded ($countSec sections)\n";
 
     // ════════════════════════════════════════════════════════════════════════
+    // 7b. ROOMS (adopted from the schedules above, grouped by floor)
+    // ════════════════════════════════════════════════════════════════════════
+    $roomFloorByHundreds = [1 => '1st Floor', 2 => '2nd Floor', 3 => '3rd Floor', 4 => '4th Floor', 5 => '5th Floor'];
+    $roomNames = $db->query("SELECT DISTINCT room FROM course_sections WHERE room IS NOT NULL AND TRIM(room) != '' ORDER BY room")->fetchAll(PDO::FETCH_COLUMN);
+    $stmtRoom = $db->prepare("INSERT OR IGNORE INTO rooms (room_code, floor, capacity) VALUES (:r, :f, :c)");
+    foreach ($roomNames as $roomName) {
+        $floor = null;
+        if (preg_match('/(\d{3})/', $roomName, $roomMatch)) {
+            $floor = $roomFloorByHundreds[(int) $roomMatch[1][0]] ?? null;
+        }
+        $stmtRoom->execute([':r' => $roomName, ':f' => $floor, ':c' => 40]);
+    }
+    echo "✓ Rooms seeded (" . count($roomNames) . ")\n";
+
+    // ════════════════════════════════════════════════════════════════════════
     // 8. STUDENTS (assigned to blocks, regular + irregular)
     //    First student is Juan Dela Cruz in BSIT 1st Year - Block 1.
     // ════════════════════════════════════════════════════════════════════════
@@ -401,6 +417,7 @@ try {
     echo "Departments:      " . querySingle("SELECT COUNT(*) FROM departments") . "\n";
     echo "Programs:         " . querySingle("SELECT COUNT(*) FROM programs") . "\n";
     echo "Blocks:           " . querySingle("SELECT COUNT(*) FROM blocks") . "\n";
+    echo "Rooms:            " . querySingle("SELECT COUNT(*) FROM rooms") . "\n";
     echo "Subjects:         " . querySingle("SELECT COUNT(*) FROM subjects") . "\n";
     echo "Instructors:      " . querySingle("SELECT COUNT(*) FROM instructors") . "\n";
     echo "Students:         " . querySingle("SELECT COUNT(*) FROM students") . "\n";

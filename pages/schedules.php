@@ -9,6 +9,33 @@ requireRole('admin');
 
 $db = getDB();
 
+/**
+ * Section codes are derived from the chosen class block now that the separate
+ * Block field is gone, so every schedule still gets a readable code (B1, B2...).
+ */
+function deriveSectionCode(PDO $db, $blockId) {
+    $blockId = (int) $blockId;
+    if ($blockId <= 0) {
+        return '';
+    }
+    $stmt = $db->prepare("SELECT block_code FROM blocks WHERE id = :id");
+    $stmt->execute([':id' => $blockId]);
+    $code = $stmt->fetchColumn();
+    return ($code === false || $code === null || $code === '') ? '' : 'B' . $code;
+}
+
+/** Section codes must stay unique per subject and term. */
+function sectionCodeTaken(PDO $db, $subjectId, $termId, $sectionCode, $excludeId = 0) {
+    $stmt = $db->prepare("SELECT COUNT(*) FROM course_sections WHERE subject_id = :s AND term_id = :t AND section_code = :c AND id <> :id");
+    $stmt->execute([
+        ':s'  => (int) $subjectId,
+        ':t'  => (int) $termId,
+        ':c'  => $sectionCode,
+        ':id' => (int) $excludeId
+    ]);
+    return (int) $stmt->fetchColumn() > 0;
+}
+
 // Make sure there is at least one academic term to assign sections to.
 $termCount = (int) querySingle("SELECT COUNT(*) FROM academic_terms");
 if ($termCount === 0) {
@@ -56,13 +83,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $instructor_id = intval($_POST['instructor_id'] ?? 0);
             $term_id = intval($_POST['term_id'] ?? 0);
             $block_id = intval($_POST['block_id'] ?? 0);
-            $block_code = sanitize($_POST['block_code'] ?? '');
             $room = sanitize($_POST['room'] ?? '');
             $schedule = sanitize($_POST['schedule'] ?? '');
             $capacity = intval($_POST['capacity'] ?? 0);
+            $section_code = deriveSectionCode($db, $block_id);
 
-            if (!$subject_id || !$instructor_id || !$term_id || $block_code === '') {
-                setFlash('Subject, instructor, term and block are required.', 'error');
+            if (!$subject_id || !$instructor_id || !$term_id || $section_code === '') {
+                setFlash('Subject, instructor, term and class block are required.', 'error');
+            } elseif (sectionCodeTaken($db, $subject_id, $term_id, $section_code)) {
+                setFlash('This subject already has a class for that block in this term. Edit that schedule instead.', 'error');
             } else {
                 // Check for schedule conflicts
                 $conflicts = [];
@@ -82,7 +111,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                             ':i'   => $instructor_id,
                             ':t'   => $term_id,
                             ':b'   => $block_id ?: null,
-                            ':c'   => $block_code,
+                            ':c'   => $section_code,
                             ':r'   => $room ?: null,
                             ':sch' => $schedule ?: null,
                             ':cap' => $capacity ?: null
@@ -103,19 +132,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $instructor_id = intval($_POST['instructor_id'] ?? 0);
             $term_id = intval($_POST['term_id'] ?? 0);
             $block_id = intval($_POST['block_id'] ?? 0);
-            $block_code = sanitize($_POST['block_code'] ?? '');
             $room = sanitize($_POST['room'] ?? '');
             $schedule = sanitize($_POST['schedule'] ?? '');
             $capacity = intval($_POST['capacity'] ?? 0);
             $status = sanitize($_POST['status'] ?? 'Open');
+
+            $section_code = deriveSectionCode($db, $block_id);
+            if ($section_code === '') {
+                // Rows created before the Block field was removed keep their code.
+                $existing = $db->prepare("SELECT section_code FROM course_sections WHERE id = :id");
+                $existing->execute([':id' => $id]);
+                $section_code = (string) $existing->fetchColumn();
+            }
 
             $validStatuses = ['Open', 'Closed', 'Completed', 'Cancelled'];
             if (!in_array($status, $validStatuses, true)) {
                 $status = 'Open';
             }
 
-            if (!$id || !$subject_id || !$instructor_id || !$term_id || $block_code === '') {
-                setFlash('Subject, instructor, term and block are required.', 'error');
+            if (!$id || !$subject_id || !$instructor_id || !$term_id || $section_code === '') {
+                setFlash('Subject, instructor, term and class block are required.', 'error');
+            } elseif (sectionCodeTaken($db, $subject_id, $term_id, $section_code, $id)) {
+                setFlash('Another class for this subject already uses that block in this term.', 'error');
             } else {
                 // Check for schedule conflicts (exclude self)
                 $conflicts = [];
@@ -135,7 +173,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                             ':i'   => $instructor_id,
                             ':t'   => $term_id,
                             ':b'   => $block_id ?: null,
-                            ':c'   => $block_code,
+                            ':c'   => $section_code,
                             ':r'   => $room ?: null,
                             ':sch' => $schedule ?: null,
                             ':cap' => $capacity ?: null,
@@ -177,6 +215,75 @@ $blocks = $db->query("
     ORDER BY d.department_name, b.year_level, b.block_code
 ")->fetchAll();
 
+function renderClassBlockOptions(array $blocks) {
+    $grouped = [];
+    foreach ($blocks as $block) {
+        $grouped[$block['department_code']][] = $block;
+    }
+    foreach ($grouped as $deptCode => $deptBlocks) {
+        echo '<optgroup label="' . htmlspecialchars($deptCode . ' — ' . $deptBlocks[0]['department_name']) . '">';
+        foreach ($deptBlocks as $block) {
+            $label = yearOrdinal($block['year_level']) . ' Year · Block ' . $block['block_code'] . ' (' . $block['block_name'] . ')';
+            echo '<option value="' . (int) $block['id'] . '">' . htmlspecialchars($label) . '</option>';
+        }
+        echo '</optgroup>';
+    }
+}
+
+// Rooms offered in the schedule modal (active rooms, grouped by floor).
+$rooms = $db->query("SELECT * FROM rooms WHERE is_active = 1")->fetchAll();
+usort($rooms, function ($a, $b) {
+    $floorDiff = floorSortIndex($a['floor'] ?? '') <=> floorSortIndex($b['floor'] ?? '');
+    return $floorDiff !== 0 ? $floorDiff : strcasecmp($a['room_code'], $b['room_code']);
+});
+
+function renderRoomOptions(array $rooms) {
+    $grouped = [];
+    foreach ($rooms as $room) {
+        $floor = ($room['floor'] !== null && $room['floor'] !== '') ? $room['floor'] : 'Not assigned to a floor';
+        $grouped[$floor][] = $room;
+    }
+    uksort($grouped, function ($a, $b) {
+        return floorSortIndex($a) <=> floorSortIndex($b);
+    });
+    foreach ($grouped as $floor => $floorRooms) {
+        echo '<optgroup label="' . htmlspecialchars($floor) . '">';
+        foreach ($floorRooms as $room) {
+            $label = $room['room_code'] . ($room['capacity'] ? ' · seats ' . (int) $room['capacity'] : '');
+            echo '<option value="' . htmlspecialchars($room['room_code'], ENT_QUOTES) . '">' . htmlspecialchars($label) . '</option>';
+        }
+        echo '</optgroup>';
+    }
+}
+
+// Existing bookings, used by the picker to grey out times already taken by the
+// selected room or instructor within the selected term.
+$bookingRows = $db->query("
+    SELECT id, term_id, room, instructor_id, schedule
+    FROM course_sections
+    WHERE schedule IS NOT NULL AND TRIM(schedule) != ''
+      AND status NOT IN ('Cancelled', 'Completed')
+")->fetchAll();
+$bookings = [];
+foreach ($bookingRows as $bookingRow) {
+    $parsedBooking = parseSchedule($bookingRow['schedule']);
+    if (!$parsedBooking) {
+        continue;
+    }
+    $bookingSessions = $parsedBooking['sessions'] ?? [$parsedBooking];
+    foreach ($bookingSessions as $bookingSession) {
+        $bookings[] = [
+            'id'            => (int) $bookingRow['id'],
+            'term_id'       => (int) $bookingRow['term_id'],
+            'room'          => $bookingRow['room'] ?? '',
+            'instructor_id' => (int) $bookingRow['instructor_id'],
+            'days'          => array_values($bookingSession['days']),
+            'start'         => (int) $bookingSession['start_minutes'],
+            'end'           => (int) $bookingSession['end_minutes'],
+        ];
+    }
+}
+
 $sections = $db->query("
     SELECT cs.*, sub.subject_code, sub.subject_name, ins.first_name, ins.last_name,
            t.term_name, t.academic_year,
@@ -208,7 +315,7 @@ displayFlash();
 
         <div class="table-search-bar">
             <div class="table-search-wrapper">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"><?php echo icon('search', 16); ?></span>
                 <input type="text" id="scheduleSearch" placeholder="Search by subject, instructor, block, room...">
             </div>
             <span class="search-count"></span>
@@ -298,7 +405,6 @@ displayFlash();
                                 data-instructor-id="<?php echo (int) $section['instructor_id']; ?>"
                                 data-term-id="<?php echo (int) $section['term_id']; ?>"
                                 data-block-id="<?php echo (int) $section['block_id']; ?>"
-                                data-block-code="<?php echo htmlspecialchars($section['section_code'], ENT_QUOTES); ?>"
                                 data-room="<?php echo htmlspecialchars($section['room'] ?? '', ENT_QUOTES); ?>"
                                 data-schedule="<?php echo htmlspecialchars($section['schedule'] ?? '', ENT_QUOTES); ?>"
                                 data-capacity="<?php echo $section['capacity'] ?: ''; ?>"
@@ -338,15 +444,8 @@ displayFlash();
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Block</label>
-                    <input type="text" name="block_code" class="form-control" placeholder="e.g. A" required>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
                     <label>Instructor</label>
-                    <select name="instructor_id" class="form-control" id="addInstructorId" required>
+                    <select name="instructor_id" class="form-control" id="addInstructorId" onchange="updateSchedulePreview('add')" required>
                         <option value="">-- Select Instructor --</option>
                         <?php foreach ($instructors as $instructor): ?>
                         <option value="<?php echo $instructor['id']; ?>">
@@ -355,9 +454,12 @@ displayFlash();
                         <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+
+            <div class="form-row">
                 <div class="form-group">
                     <label>Term</label>
-                    <select name="term_id" class="form-control" id="addTermId" required>
+                    <select name="term_id" class="form-control" id="addTermId" onchange="updateSchedulePreview('add')" required>
                         <?php foreach ($terms as $term): ?>
                         <option value="<?php echo $term['id']; ?>" <?php echo $term['is_current'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($term['term_name'] . ' ' . $term['academic_year'] . ($term['is_current'] ? ' (Current)' : '')); ?>
@@ -365,24 +467,35 @@ displayFlash();
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Class Block</label>
+                    <select name="block_id" class="form-control" id="addBlockId" onchange="updateSchedulePreview('add')" required>
+                        <option value="">-- Select Class Block --</option>
+                        <?php renderClassBlockOptions($blocks); ?>
+                    </select>
+                    <span class="form-hint">The block number is taken from this class block.</span>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Class Block</label>
-                <select name="block_id" class="form-control" id="addBlockId">
-                    <option value="">-- No Class Block --</option>
-                    <?php foreach ($blocks as $block): ?>
-                    <option value="<?php echo $block['id']; ?>">
-                        <?php echo htmlspecialchars(blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name'])); ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                    <label>Room</label>
+                    <select name="room" class="form-control" id="addRoom" onchange="updateSchedulePreview('add')">
+                        <option value="">-- Select Room --</option>
+                        <?php renderRoomOptions($rooms); ?>
+                    </select>
+                    <div class="room-conflict-warning" id="addRoomConflict">This room may have a scheduling conflict.</div>
+                </div>
+                <div class="form-group">
+                    <label>Capacity</label>
+                    <input type="number" name="capacity" class="form-control" min="1" placeholder="e.g. 40">
+                </div>
             </div>
 
             <!-- Schedule Picker -->
             <div class="schedule-picker" id="addSchedulePicker">
                 <label class="schedule-picker-label">Schedule</label>
-                <span class="schedule-picker-hint">Add one or more class sessions. Each session has its own days and time.</span>
+                <span class="schedule-picker-hint">Pick the room above first, then add one or more class sessions. Times already booked for that room or instructor are greyed out.</span>
 
                 <div id="addSessions">
                     <!-- Session 1 -->
@@ -469,18 +582,6 @@ displayFlash();
                 </div>
             </div>
 
-            <div class="form-row" style="margin-top: 16px;">
-                <div class="form-group">
-                    <label>Room</label>
-                    <input type="text" name="room" class="form-control" id="addRoom" placeholder="e.g. Room 201" oninput="checkRoomConflict('add')">
-                    <div class="room-conflict-warning" id="addRoomConflict">This room may have a scheduling conflict.</div>
-                </div>
-                <div class="form-group">
-                    <label>Capacity</label>
-                    <input type="number" name="capacity" class="form-control" min="1" placeholder="e.g. 40">
-                </div>
-            </div>
-
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                 <button type="submit" class="btn btn-success">Save Schedule</button>
                 <button type="button" class="btn btn-danger" onclick="document.getElementById('addBlockModal').style.display='none'">Cancel</button>
@@ -532,15 +633,8 @@ displayFlash();
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Block</label>
-                    <input type="text" name="block_code" id="editBlockCode" class="form-control" required>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
                     <label>Instructor</label>
-                    <select name="instructor_id" id="editSecInstructor" class="form-control" required>
+                    <select name="instructor_id" id="editSecInstructor" class="form-control" onchange="updateSchedulePreview('edit')" required>
                         <?php foreach ($instructors as $instructor): ?>
                         <option value="<?php echo $instructor['id']; ?>">
                             <?php echo htmlspecialchars($instructor['first_name'] . ' ' . $instructor['last_name'] . ' (' . $instructor['employee_id'] . ')'); ?>
@@ -548,9 +642,12 @@ displayFlash();
                         <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+
+            <div class="form-row">
                 <div class="form-group">
                     <label>Term</label>
-                    <select name="term_id" id="editSecTerm" class="form-control" required>
+                    <select name="term_id" id="editSecTerm" class="form-control" onchange="updateSchedulePreview('edit')" required>
                         <?php foreach ($terms as $term): ?>
                         <option value="<?php echo $term['id']; ?>">
                             <?php echo htmlspecialchars($term['term_name'] . ' ' . $term['academic_year'] . ($term['is_current'] ? ' (Current)' : '')); ?>
@@ -558,24 +655,35 @@ displayFlash();
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Class Block</label>
+                    <select name="block_id" id="editSecBlock" class="form-control" onchange="updateSchedulePreview('edit')" required>
+                        <option value="">-- Select Class Block --</option>
+                        <?php renderClassBlockOptions($blocks); ?>
+                    </select>
+                    <span class="form-hint">The block number is taken from this class block.</span>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Class Block</label>
-                <select name="block_id" id="editSecBlock" class="form-control">
-                    <option value="">-- No Class Block --</option>
-                    <?php foreach ($blocks as $block): ?>
-                    <option value="<?php echo $block['id']; ?>">
-                        <?php echo htmlspecialchars(blockLabel($block['department_code'], $block['year_level'], $block['block_code'], $block['block_name'])); ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                    <label>Room</label>
+                    <select name="room" id="editSecRoom" class="form-control" onchange="updateSchedulePreview('edit')">
+                        <option value="">-- Select Room --</option>
+                        <?php renderRoomOptions($rooms); ?>
+                    </select>
+                    <div class="room-conflict-warning" id="editRoomConflict">This room may have a scheduling conflict.</div>
+                </div>
+                <div class="form-group">
+                    <label>Capacity</label>
+                    <input type="number" name="capacity" id="editSecCapacity" class="form-control" min="1" placeholder="e.g. 40">
+                </div>
             </div>
 
             <!-- Schedule Picker -->
             <div class="schedule-picker" id="editSchedulePicker">
                 <label class="schedule-picker-label">Schedule</label>
-                <span class="schedule-picker-hint">Add one or more class sessions. Each session has its own days and time.</span>
+                <span class="schedule-picker-hint">Pick the room above first, then add one or more class sessions. Times already booked for that room or instructor are greyed out.</span>
 
                 <div id="editSessions">
                     <!-- Session 1 -->
@@ -662,18 +770,6 @@ displayFlash();
                 </div>
             </div>
 
-            <div class="form-row" style="margin-top: 16px;">
-                <div class="form-group">
-                    <label>Room</label>
-                    <input type="text" name="room" id="editSecRoom" class="form-control" placeholder="e.g. Room 201" oninput="checkRoomConflict('edit')">
-                    <div class="room-conflict-warning" id="editRoomConflict">This room may have a scheduling conflict.</div>
-                </div>
-                <div class="form-group">
-                    <label>Capacity</label>
-                    <input type="number" name="capacity" id="editSecCapacity" class="form-control" min="1" placeholder="e.g. 40">
-                </div>
-            </div>
-
             <div class="form-row">
                 <div class="form-group">
                     <label>Status</label>
@@ -739,10 +835,16 @@ displayFlash();
 </div>
 
 <script>
+    // Existing bookings (room + instructor) used to grey out taken times.
+    window.SCHEDULE_BOOKINGS = <?php echo json_encode($bookings, JSON_UNESCAPED_SLASHES); ?>;
+</script>
+
+<script>
     // =====================================================
     // Multi-Session Schedule Picker
     // =====================================================
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const BOOKINGS = window.SCHEDULE_BOOKINGS || [];
     const conflictTimers = {};
     var sessionCounters = { add: 1, edit: 1 };
 
@@ -802,6 +904,99 @@ displayFlash();
         return h12 + ':' + m + ' ' + suffix;
     }
 
+    /** "HH:MM" -> minutes from midnight. */
+    function timeToMinutes(value) {
+        var parts = (value || '').split(':');
+        return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+    }
+
+    /** Set a select's value, adding a temporary option when it is not listed. */
+    function setSelectValue(select, value) {
+        if (!select) return;
+        value = (value === null || value === undefined) ? '' : String(value);
+        var exists = Array.prototype.some.call(select.options, function(option) {
+            return option.value === value;
+        });
+        if (!exists && value !== '') {
+            var option = document.createElement('option');
+            option.value = value;
+            option.textContent = value + ' (not in list)';
+            select.appendChild(option);
+        }
+        select.value = value;
+    }
+
+    /** Disable/grey the options a callback reports as unavailable. */
+    function applyTimeAvailability(select, isUnavailable) {
+        Array.prototype.forEach.call(select.options, function(option) {
+            if (option.dataset.baseLabel === undefined) {
+                option.dataset.baseLabel = option.textContent;
+            }
+            var busy = isUnavailable(timeToMinutes(option.value));
+            var keepSelectable = option.value === select.value;
+            option.disabled = busy && !keepSelectable;
+            option.textContent = busy ? option.dataset.baseLabel + ' — booked' : option.dataset.baseLabel;
+        });
+    }
+
+    /**
+     * Grey out times already booked for the selected room or instructor on the
+     * days chosen for each session. Mirrors the server-side conflict check.
+     */
+    function refreshTimeAvailability(prefix) {
+        var roomEl = document.getElementById(prefix === 'add' ? 'addRoom' : 'editSecRoom');
+        var instructorEl = document.getElementById(prefix === 'add' ? 'addInstructorId' : 'editSecInstructor');
+        var termEl = document.getElementById(prefix === 'add' ? 'addTermId' : 'editSecTerm');
+        var excludeEl = document.getElementById('editSecId');
+
+        var room = roomEl ? roomEl.value : '';
+        var instructorId = instructorEl ? (parseInt(instructorEl.value, 10) || 0) : 0;
+        var termId = termEl ? (parseInt(termEl.value, 10) || 0) : 0;
+        var excludeId = (prefix === 'edit' && excludeEl) ? (parseInt(excludeEl.value, 10) || 0) : 0;
+
+        getSessions(prefix).forEach(function(session) {
+            var idx = parseInt(session.dataset.session, 10);
+            var days = getSelectedDaysForSession(idx);
+            var startEl = session.querySelector('[data-session-start="' + idx + '"]');
+            var endEl = session.querySelector('[data-session-end="' + idx + '"]');
+            if (!startEl || !endEl) return;
+
+            var busy = BOOKINGS.filter(function(booking) {
+                if (termId && booking.term_id !== termId) return false;
+                if (excludeId && booking.id === excludeId) return false;
+                var sameRoom = room !== '' && booking.room !== '' && booking.room === room;
+                var sameInstructor = instructorId > 0 && booking.instructor_id === instructorId;
+                if (!sameRoom && !sameInstructor) return false;
+                return booking.days.some(function(day) { return days.indexOf(day) !== -1; });
+            });
+
+            if (days.length === 0 || busy.length === 0) {
+                applyTimeAvailability(startEl, function() { return false; });
+                applyTimeAvailability(endEl, function() { return false; });
+                return;
+            }
+
+            var startMin = timeToMinutes(startEl.value);
+            var endMin = timeToMinutes(endEl.value);
+
+            applyTimeAvailability(startEl, function(minute) {
+                return busy.some(function(booking) {
+                    // Starts inside a booking, or the chosen range spans one.
+                    return (minute >= booking.start && minute < booking.end) ||
+                           (minute < booking.end && booking.start < endMin);
+                });
+            });
+
+            applyTimeAvailability(endEl, function(minute) {
+                return busy.some(function(booking) {
+                    // Ends inside a booking, or the chosen range spans one.
+                    return (minute > booking.start && minute <= booking.end) ||
+                           (startMin < booking.end && booking.start < minute);
+                });
+            });
+        });
+    }
+
     /** Build the schedule string from all sessions and update the preview. */
     function updateSchedulePreview(prefix) {
         var sessions = getSessions(prefix);
@@ -842,6 +1037,7 @@ displayFlash();
         }
         hiddenEl.value = schedule;
 
+        refreshTimeAvailability(prefix);
         debounceConflictCheck(prefix);
     }
 
@@ -982,7 +1178,7 @@ displayFlash();
             formData.append('exclude_id', document.getElementById('editSecId').value);
         }
 
-        fetch('api/check-conflicts.php', { method: 'POST', body: formData })
+        fetch('../api/check-conflicts.php', { method: 'POST', body: formData })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.ok && data.conflicts.length > 0) {
@@ -1149,9 +1345,8 @@ displayFlash();
         document.getElementById('editSecSubject').value = btn.dataset.subjectId;
         document.getElementById('editSecInstructor').value = btn.dataset.instructorId;
         document.getElementById('editSecTerm').value = btn.dataset.termId;
-        document.getElementById('editSecBlock').value = btn.dataset.blockId || '';
-        document.getElementById('editBlockCode').value = btn.dataset.blockCode;
-        document.getElementById('editSecRoom').value = btn.dataset.room || '';
+        setSelectValue(document.getElementById('editSecBlock'), btn.dataset.blockId || '');
+        setSelectValue(document.getElementById('editSecRoom'), btn.dataset.room || '');
         document.getElementById('editSecCapacity').value = btn.dataset.capacity || '';
         document.getElementById('editSecStatus').value = btn.dataset.status;
 
@@ -1246,7 +1441,9 @@ displayFlash();
             document.getElementById('addRoomConflict').classList.remove('visible');
         });
 
-    initTableSearch('scheduleSearch', 'scheduleTable');
+    // Normalise the time labels on first paint.
+    updateSchedulePreview('add');
+
 </script>
 
 <?php include '../includes/footer.php'; ?>

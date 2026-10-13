@@ -138,7 +138,7 @@ include '../includes/header.php';
 
             <div class="table-search-bar">
                 <div class="table-search-wrapper">
-                    <span class="search-icon">🔍</span>
+                    <span class="search-icon"><?php echo icon('search', 16); ?></span>
                     <input type="text" id="studentSearch" placeholder="Search by name, ID, email, block...">
                 </div>
                 <span class="search-count"></span>
@@ -273,7 +273,6 @@ include '../includes/header.php';
                 this.style.display = 'none';
             }
         });
-        initTableSearch('studentSearch', 'studentTable');
     </script>
 
 <?php include '../includes/footer.php'; ?>
