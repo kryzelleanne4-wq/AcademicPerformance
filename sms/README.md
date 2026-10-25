@@ -4,8 +4,11 @@ This system sends automated SMS notifications to students using Android SMS Gate
 
 ## Features
 
-1. **Schedule Reminders** - Students receive SMS notifications 1 day before their scheduled classes
-2. **Grade Notifications** - Students receive SMS when instructors submit their grades
+1. **Schedule Reminders** - Students receive an SMS the day before a scheduled class
+2. **Grade Notifications** - Students receive an SMS when their instructor submits their grades
+3. **Notifications page** - Students can read every message in the portal (Student menu -> Notifications)
+4. **SMS delivery log** - Admins can see exactly what was sent, skipped or failed, and why
+   (Admin menu -> SMS Notifications, which also has a test-message button)
 
 ## Setup Instructions
 
@@ -17,24 +20,36 @@ This system sends automated SMS notifications to students using Android SMS Gate
 
 ### Step 2: Configure SMS Credentials
 
-Open `sms/function/sms-service.php` and find these lines (around line 34-35):
+Open `sms/function/sms-service.php`. The username and password are the two lines
+marked with the big comment block near the top of the constructor:
 
 ```php
-$this->username = $username ?? 'YOUR_SMS_GATEWAY_USERNAME'; // <- PUT YOUR USERNAME HERE
-$this->password = $password ?? 'YOUR_SMS_GATEWAY_PASSWORD'; // <- PUT YOUR PASSWORD HERE
+$this->username = $username ?? 'HSJV8P';          // <-- YOUR APK USERNAME
+$this->password = $password ?? 'jd4f4djwhdvtnd';  // <-- YOUR APK PASSWORD
 ```
 
-Replace `YOUR_SMS_GATEWAY_USERNAME` and `YOUR_SMS_GATEWAY_PASSWORD` with your actual credentials from the SMS Gateway app.
+Replace the text inside the quotes with the **username** and **password** shown in
+your SMS Gateway APK (login screen, or menu -> Settings -> Account).
+There is **no .env file** - these two lines are the only credentials needed.
 
-**Example:**
-```php
-$this->username = $username ?? 'john_doe_123';
-$this->password = $password ?? 'my_secure_password_456';
-```
+Just below them is the gateway address, which is already set to the cloud server
+(`https://api.sms-gate.app/3rdparty/v1`). If you run the APK in **Local** mode,
+change it to the phone's Wi-Fi address, e.g. `http://192.168.1.10:8080/api/3rdparty/v1`.
 
-### Step 3: Set Up Schedule Reminder Cron Job
+### Step 3: Schedule Reminders (optional cron job)
 
-The schedule reminder needs to run automatically every day. Choose your operating system:
+The daily "class tomorrow" reminder runs **automatically** - the dashboard starts it
+once per day the first time somebody opens the system, so no cron entry is required.
+It is safe to run it more often: a student is never texted twice for the same class
+on the same day.
+
+You can also trigger it by hand:
+
+* Admin menu -> **SMS Notifications** -> *Send reminders for tomorrow*
+* `php sms/cron/schedule-reminder.php`
+
+If you want a fixed daily time instead, set up a scheduled task with one of the
+options below.
 
 #### Windows (Task Scheduler)
 
