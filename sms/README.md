@@ -4,16 +4,11 @@ This system sends automated SMS notifications to students using Android SMS Gate
 
 ## Features
 
-<<<<<<< HEAD
 1. **Schedule Reminders** - Students receive an SMS the day before a scheduled class
 2. **Grade Notifications** - Students receive an SMS when their instructor submits their grades
 3. **Notifications page** - Students can read every message in the portal (Student menu -> Notifications)
 4. **SMS delivery log** - Admins can see exactly what was sent, skipped or failed, and why
    (Admin menu -> SMS Notifications, which also has a test-message button)
-=======
-1. **Schedule Reminders** - Students receive SMS notifications 1 day before their scheduled classes
-2. **Grade Notifications** - Students receive SMS when instructors submit their grades
->>>>>>> main
 
 ## Setup Instructions
 
@@ -25,7 +20,6 @@ This system sends automated SMS notifications to students using Android SMS Gate
 
 ### Step 2: Configure SMS Credentials
 
-<<<<<<< HEAD
 Open `sms/function/sms-service.php`. The username and password are the two lines
 marked with the big comment block near the top of the constructor:
 
@@ -56,26 +50,6 @@ You can also trigger it by hand:
 
 If you want a fixed daily time instead, set up a scheduled task with one of the
 options below.
-=======
-Open `sms/function/sms-service.php` and find these lines (around line 34-35):
-
-```php
-$this->username = $username ?? 'YOUR_SMS_GATEWAY_USERNAME'; // <- PUT YOUR USERNAME HERE
-$this->password = $password ?? 'YOUR_SMS_GATEWAY_PASSWORD'; // <- PUT YOUR PASSWORD HERE
-```
-
-Replace `YOUR_SMS_GATEWAY_USERNAME` and `YOUR_SMS_GATEWAY_PASSWORD` with your actual credentials from the SMS Gateway app.
-
-**Example:**
-```php
-$this->username = $username ?? 'john_doe_123';
-$this->password = $password ?? 'my_secure_password_456';
-```
-
-### Step 3: Set Up Schedule Reminder Cron Job
-
-The schedule reminder needs to run automatically every day. Choose your operating system:
->>>>>>> main
 
 #### Windows (Task Scheduler)
 

@@ -116,6 +116,10 @@ if ($role === 'student') {
                     <span class="icon"><?php echo icon('book-open'); ?></span>
                     My Subjects
                 </a>
+                <a href="<?php echo $assetPrefix; ?>pages/my-students.php" class="menu-item <?php echo $currentPage === 'my-students' ? 'active' : ''; ?>">
+                    <span class="icon"><?php echo icon('users'); ?></span>
+                    My Students
+                </a>
                 <a href="<?php echo $assetPrefix; ?>pages/attendance.php" class="menu-item <?php echo $currentPage === 'attendance' ? 'active' : ''; ?>">
                     <span class="icon"><?php echo icon('clipboard-check'); ?></span>
                     Attendance
