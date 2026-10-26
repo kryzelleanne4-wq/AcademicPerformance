@@ -65,6 +65,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
     $year = intval($_POST['year'] ?? date('Y'));
     $scores = (array) ($_POST['scores'] ?? []);      // [enrollment_row_key][component_id] = score
     $savedCount = 0;
+    $gradeQueue = [];       // Students whose grade is new or changed -> notify after commit
+    $smsSent = 0;
+    $smsFailed = 0;
+    $smsSkipped = 0;
 
     $classSectionsStmt = $db->prepare("SELECT * FROM course_sections WHERE id = :id");
     $classSectionsStmt->execute([':id' => $sectionId]);
@@ -108,7 +112,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
 
             // Upsert the grade row for this student+section.
             $gradeStmt = $db->prepare("
-                SELECT id FROM grades
+                SELECT id, score FROM grades
                 WHERE student_id = :sid AND section_id = :sec AND semester = :sem AND year = :yr
                 LIMIT 1
             ");
@@ -116,7 +120,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
                 ':sid' => $studentId, ':sec' => $sectionId,
                 ':sem' => $semester, ':yr' => $year
             ]);
-            $gradeId = $gradeStmt->fetchColumn();
+            $gradeRow = $gradeStmt->fetch();
+            $gradeId = $gradeRow ? $gradeRow['id'] : null;
 
             if ($gradeId) {
                 $upd = $db->prepare("UPDATE grades SET score = :score, grade = :grade, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
@@ -146,6 +151,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
                 $compUpsert->execute([':gid' => $gradeId, ':cid' => $component['id'], ':score' => $val]);
             }
 
+            // Only notify when the grade is new or the score actually changed,
+            // so re-opening and saving the same sheet does not spam the student.
+            $previousScore = ($gradeRow && $gradeRow['score'] !== null) ? (float) $gradeRow['score'] : null;
+            if ($previousScore === null || abs($previousScore - (float) $overall) > 0.001) {
+                $gradeQueue[$studentId] = [
+                    'score' => $overall,
+                    'grade' => calculateGrade($overall),
+                ];
+            }
+
             $savedCount++;
         }
 
@@ -162,6 +177,66 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
         $db->commit();
         
         // ============================================
+<<<<<<< HEAD
+        // NOTIFY STUDENTS (in-app notification + SMS)
+        // ============================================
+        // This runs after the grades are committed and is fully guarded, so a
+        // phone that is offline or out of load can never make saving fail.
+        if ($gradeQueue) {
+            require_once __DIR__ . '/../includes/notifications.php';
+
+            $subjectStmt = $db->prepare("SELECT subject_code, subject_name FROM subjects WHERE id = :id");
+            $subjectStmt->execute([':id' => $clsSection['subject_id']]);
+            $subjectInfo = $subjectStmt->fetch() ?: ['subject_code' => '', 'subject_name' => ''];
+
+            $instructorName = '';
+            if (!empty($clsSection['instructor_id'])) {
+                $insStmt = $db->prepare("SELECT first_name, last_name FROM instructors WHERE id = :id");
+                $insStmt->execute([':id' => $clsSection['instructor_id']]);
+                if ($insRow = $insStmt->fetch()) {
+                    $instructorName = trim($insRow['first_name'] . ' ' . $insRow['last_name']);
+                }
+            }
+
+            foreach ($gradeQueue as $notifyStudentId => $entry) {
+                try {
+                    $result = notifyGradePosted(
+                        $db,
+                        (int) $notifyStudentId,
+                        $sectionId,
+                        $subjectInfo['subject_code'],
+                        $subjectInfo['subject_name'],
+                        $entry['grade'],
+                        $entry['score'],
+                        $instructorName
+                    );
+
+                    if (!empty($result['success'])) {
+                        $smsSent++;
+                    } elseif (!empty($result['skipped'])) {
+                        $smsSkipped++;
+                    } else {
+                        $smsFailed++;
+                    }
+                } catch (Throwable $e) {
+                    $smsFailed++;
+                    error_log('Grade notification failed for student ' . $notifyStudentId . ': ' . $e->getMessage());
+                }
+            }
+        }
+
+        $flash = 'Score sheet saved for ' . $savedCount . ' student(s).';
+        if ($smsSent > 0) {
+            $flash .= ' SMS notification sent to ' . $smsSent . ' student(s).';
+        }
+        if ($smsSkipped > 0) {
+            $flash .= ' ' . $smsSkipped . ' student(s) have no mobile number on file.';
+        }
+        if ($smsFailed > 0) {
+            $flash .= ' ' . $smsFailed . ' SMS could not be delivered - open SMS Notifications to see why.';
+        }
+        setFlash($flash);
+=======
         // SEND SMS NOTIFICATIONS TO STUDENTS
         // ============================================
         // After successfully saving grades, send SMS notifications to students
@@ -272,6 +347,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
         if ($smsErrors > 0) {
             error_log("Failed to send {$smsErrors} SMS notifications for grade posting.");
         }
+>>>>>>> main
     } catch (Exception $e) {
         if ($db->inTransaction()) {
             $db->rollBack();

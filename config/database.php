@@ -34,6 +34,18 @@ function getDB() {
     return $db;
 }
 
+// Add a column to an existing table when it is missing (idempotent).
+function ensureColumn(PDO $db, $table, $column, $definition) {
+    $columns = [];
+    $stmt = $db->query('PRAGMA table_info(' . str_replace('`', '', $table) . ')');
+    foreach ($stmt->fetchAll() as $existing) {
+        $columns[$existing['name']] = true;
+    }
+    if (!isset($columns[$column])) {
+        $db->exec('ALTER TABLE ' . $table . ' ADD COLUMN ' . $column . ' ' . $definition);
+    }
+}
+
 // Create any tables that may be missing from an existing database file.
 // Kept idempotent so it is safe to run on every connection.
 function ensureSchema(PDO $db) {
@@ -65,6 +77,58 @@ function ensureSchema(PDO $db) {
             }
         }
     }
+
+    // ── SMS delivery log ────────────────────────────────────────────────
+    // One row per text message the system tried to deliver, so the admin
+    // page can show what was sent, when, and why something failed.
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS sms_notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            notification_type TEXT NOT NULL,
+            title TEXT,
+            message TEXT,
+            status TEXT NOT NULL DEFAULT 'sent',
+            error TEXT,
+            reference_id INTEGER,
+            sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+        )
+    ");
+    // Earlier versions created a slimmer table; add the new columns in place.
+    ensureColumn($db, 'sms_notifications', 'title', 'TEXT');
+    ensureColumn($db, 'sms_notifications', 'message', 'TEXT');
+    ensureColumn($db, 'sms_notifications', 'status', "TEXT NOT NULL DEFAULT 'sent'");
+    ensureColumn($db, 'sms_notifications', 'error', 'TEXT');
+
+    // ── In-app notifications ───────────────────────────────────────────
+    // These power the student's Notifications page. They are always created
+    // next to an SMS so the message is still readable if the phone is off.
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            notification_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            reference_id INTEGER,
+            read_at DATETIME,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+        )
+    ");
+
+    // Small key/value store (used to remember the last reminder run).
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS app_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+
+    $db->exec('CREATE INDEX IF NOT EXISTS idx_notifications_student ON notifications(student_id, read_at)');
+    $db->exec('CREATE INDEX IF NOT EXISTS idx_sms_notifications_student ON sms_notifications(student_id, sent_at)');
 }
 
 // Helper: Get single value from query (replaces SQLite3::querySingle)

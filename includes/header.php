@@ -15,6 +15,16 @@ $role = $user['role'];
 $fullName = $user['full_name'];
 $roleLabel = roleLabel($role);
 $avatarLetter = strtoupper(substr($fullName, 0, 1));
+
+// Unread notification count for the sidebar badge (students only).
+$unreadNotifications = 0;
+if ($role === 'student') {
+    require_once __DIR__ . '/notifications.php';
+    $headerStudent = currentStudent();
+    if ($headerStudent) {
+        $unreadNotifications = countUnreadNotifications(getDB(), (int) $headerStudent['id']);
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,6 +105,10 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
                     <span class="icon"><?php echo icon('bar-chart'); ?></span>
                     Reports
                 </a>
+                <a href="<?php echo $assetPrefix; ?>pages/sms-notifications.php" class="menu-item <?php echo $currentPage === 'sms-notifications' ? 'active' : ''; ?>">
+                    <span class="icon"><?php echo icon('bell'); ?></span>
+                    SMS Notifications
+                </a>
 
             <?php elseif ($role === 'instructor'): ?>
                 <div class="menu-category">Teaching</div>
@@ -113,6 +127,11 @@ $avatarLetter = strtoupper(substr($fullName, 0, 1));
 
             <?php else: ?>
                 <div class="menu-category">My Records</div>
+                <a href="<?php echo $assetPrefix; ?>pages/notifications.php" class="menu-item <?php echo $currentPage === 'notifications' ? 'active' : ''; ?>">
+                    <span class="icon"><?php echo icon('bell'); ?></span>
+                    Notifications
+                    <?php if ($unreadNotifications > 0): ?><span class="menu-badge"><?php echo (int) $unreadNotifications; ?></span><?php endif; ?>
+                </a>
                 <a href="<?php echo $assetPrefix; ?>pages/my-grades.php" class="menu-item <?php echo $currentPage === 'my-grades' ? 'active' : ''; ?>">
                     <span class="icon"><?php echo icon('file-text'); ?></span>
                     My Grades

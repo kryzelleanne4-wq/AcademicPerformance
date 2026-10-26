@@ -12,6 +12,16 @@ $db = getDB();
 $user = currentUser();
 $role = $user['role'];
 
+// Send the "you have a class tomorrow" SMS once per day. Running it here means
+// reminders go out without having to set up a cron job; running it twice is
+// harmless because each student is notified at most once per class per day.
+try {
+    require_once 'includes/notifications.php';
+    runScheduleRemindersIfDue($db);
+} catch (Throwable $e) {
+    error_log('Automatic schedule reminder failed: ' . $e->getMessage());
+}
+
 // Stats per role.
 $stats = [];
 if ($role === 'admin') {

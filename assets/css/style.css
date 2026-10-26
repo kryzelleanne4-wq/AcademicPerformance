@@ -2396,3 +2396,141 @@ small {
         max-height: 68vh;
     }
 }
+
+/* ========================================
+   Notifications (student page)
+   ======================================== */
+.menu-badge {
+    display: inline-flex;
+    min-width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    padding: 0 6px;
+    border-radius: var(--radius-pill);
+    background: var(--primary);
+    color: var(--surface-white);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.notification-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--outline-hairline);
+    background: var(--surface-white);
+}
+
+.notification-item:last-child {
+    border-bottom: 0;
+}
+
+.notification-item.is-unread {
+    background: var(--surface-low);
+}
+
+.notification-icon {
+    display: flex;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    background: var(--surface-container);
+    color: var(--primary);
+}
+
+.notification-icon-schedule_reminder {
+    background: var(--primary-soft);
+    color: var(--primary-container);
+}
+
+.notification-icon-grade_posted {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.notification-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.notification-title-row h3 {
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 22px;
+}
+
+.notification-time {
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.notification-message {
+    margin: 4px 0 8px;
+    color: var(--ink-muted);
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.notification-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-badge {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-container);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.notification-link {
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.notification-action {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+@media (max-width: 720px) {
+    .notification-item {
+        flex-wrap: wrap;
+        padding: 16px;
+    }
+
+    .notification-action {
+        width: 100%;
+    }
+}
