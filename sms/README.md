@@ -20,16 +20,18 @@ This system sends automated SMS notifications to students using Android SMS Gate
 
 ### Step 2: Configure SMS Credentials
 
-Open `sms/function/sms-service.php`. The username and password are the two lines
+The username and password live in `sms/function/sms-service.php`, on the two lines
 marked with the big comment block near the top of the constructor:
 
 ```php
-$this->username = $username ?? 'HSJV8P';          // <-- YOUR APK USERNAME
-$this->password = $password ?? 'jd4f4djwhdvtnd';  // <-- YOUR APK PASSWORD
+$this->username = $username ?? 'YOUR_APK_USERNAME';   // <-- YOUR APK USERNAME
+$this->password = $password ?? 'YOUR_APK_PASSWORD';   // <-- YOUR APK PASSWORD
 ```
 
-Replace the text inside the quotes with the **username** and **password** shown in
-your SMS Gateway APK (login screen, or menu -> Settings -> Account).
+These are **already filled in for this project**, so there is nothing to do unless
+the SMS Gateway account is changed: replace the text inside the quotes with the
+**username** and **password** shown in your SMS Gateway APK (login screen, or
+menu -> Settings -> Account).
 There is **no .env file** - these two lines are the only credentials needed.
 
 Just below them is the gateway address, which is already set to the cloud server

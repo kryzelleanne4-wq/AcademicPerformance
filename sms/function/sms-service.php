@@ -41,8 +41,8 @@ class SMSService {
         //  file - just edit this file and save it.
         //  The phone has to stay online and signed in for texts to go out.
         // ==================================================================
-        $this->username = $username ?? 'HSJV8P';          // <-- YOUR APK USERNAME
-        $this->password = $password ?? 'jd4f4djwhdvtnd';  // <-- YOUR APK PASSWORD
+        $this->username = $username ?? 'GTDE5A';            // <-- YOUR APK USERNAME
+        $this->password = $password ?? 'd_94hhwzcwngkm';    // <-- YOUR APK PASSWORD
 
         // Gateway address.
         //   Cloud server (default) ... https://api.sms-gate.app/3rdparty/v1
