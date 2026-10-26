@@ -1,11 +1,16 @@
 <?php
 /**
  * SMS Notification Service
+<<<<<<< HEAD
  * Reusable service for sending SMS notifications to students.
  *
  * Messages are delivered through the Android SMS Gateway APK that runs on your
  * own phone. The phone must be switched on, online, and signed in to the same
  * SMS Gateway account as the username/password below.
+=======
+ * Reusable service for sending SMS notifications to students
+ * Uses Android SMS Gateway APK
+>>>>>>> main
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -16,6 +21,7 @@ use AndroidSmsGateway\Domain\Message;
 class SMSService {
     private $username;
     private $password;
+<<<<<<< HEAD
     private $baseUrl;
     private $client;
 
@@ -73,6 +79,42 @@ class SMSService {
      * Send SMS to a Philippine mobile number
      *
      * @param string $phoneNumber Philippine mobile number (09171234567, 9171234567 or +639171234567)
+=======
+    private $client;
+    
+    /**
+     * Initialize SMS Service
+     * 
+     * IMPORTANT: Replace these credentials with your Android SMS Gateway APK credentials
+     * You can get these from your SMS Gateway app on your phone
+     * 
+     * @param string $username Your SMS Gateway APK username
+     * @param string $password Your SMS Gateway APK password
+     */
+    public function __construct($username = null, $password = null) {
+        // ============================================
+        // TODO: PUT YOUR SMS GATEWAY APK CREDENTIALS HERE
+        // ============================================
+        // Option 1: Pass credentials when creating the service
+        // Option 2: Set default credentials here (uncomment and edit below)
+        
+        $this->username = $username ?? 'YOUR_SMS_GATEWAY_USERNAME'; // <- PUT YOUR USERNAME HERE
+        $this->password = $password ?? 'YOUR_SMS_GATEWAY_PASSWORD'; // <- PUT YOUR PASSWORD HERE
+        
+        // ============================================
+        
+        if ($this->username === 'YOUR_SMS_GATEWAY_USERNAME' || $this->password === 'YOUR_SMS_GATEWAY_PASSWORD') {
+            error_log('WARNING: SMS Gateway credentials not configured. Please update sms/function/sms-service.php');
+        }
+        
+        $this->client = new Client($this->username, $this->password);
+    }
+    
+    /**
+     * Send SMS to a Philippine mobile number
+     * 
+     * @param string $phoneNumber Philippine mobile number (format: 9XXXXXXXXX or +639XXXXXXXXX)
+>>>>>>> main
      * @param string $message SMS message content
      * @return array Result with 'success' boolean and 'message' string
      */
@@ -80,6 +122,7 @@ class SMSService {
         try {
             // Format phone number to +639XXXXXXXXX
             $formattedNumber = $this->formatPhoneNumber($phoneNumber);
+<<<<<<< HEAD
 
             if (!$formattedNumber) {
                 return [
@@ -95,11 +138,29 @@ class SMSService {
             // Log success
             error_log("SMS sent successfully. ID: " . $messageState->ID() . ", Number: " . $formattedNumber);
 
+=======
+            
+            if (!$formattedNumber) {
+                return [
+                    'success' => false,
+                    'message' => 'Invalid Philippine mobile number format. Must be 9XXXXXXXXX (10 digits starting with 9)'
+                ];
+            }
+            
+            // Create and send message
+            $smsMessage = new Message($message, [$formattedNumber]);
+            $messageState = $this->client->Send($smsMessage);
+            
+            // Log success
+            error_log("SMS sent successfully. ID: " . $messageState->ID() . ", Number: " . $formattedNumber);
+            
+>>>>>>> main
             return [
                 'success' => true,
                 'message' => 'SMS sent successfully',
                 'message_id' => $messageState->ID()
             ];
+<<<<<<< HEAD
 
         } catch (Throwable $e) {
             $error = $e->getMessage();
@@ -117,6 +178,21 @@ class SMSService {
     /**
      * Send SMS to multiple recipients
      *
+=======
+            
+        } catch (Exception $e) {
+            error_log("SMS sending failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to send SMS: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Send SMS to multiple recipients
+     * 
+>>>>>>> main
      * @param array $recipients Array of phone numbers
      * @param string $message SMS message content
      * @return array Results with count of successful and failed sends
@@ -128,21 +204,33 @@ class SMSService {
             'failed' => 0,
             'details' => []
         ];
+<<<<<<< HEAD
 
         foreach ($recipients as $phoneNumber) {
             $result = $this->sendSMS($phoneNumber, $message);
 
+=======
+        
+        foreach ($recipients as $phoneNumber) {
+            $result = $this->sendSMS($phoneNumber, $message);
+            
+>>>>>>> main
             if ($result['success']) {
                 $results['successful']++;
             } else {
                 $results['failed']++;
             }
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> main
             $results['details'][] = [
                 'phone' => $phoneNumber,
                 'status' => $result['success'] ? 'sent' : 'failed',
                 'message' => $result['message']
             ];
+<<<<<<< HEAD
 
             // Small delay to avoid overwhelming the gateway
             usleep(300000); // 0.3 second delay between messages
@@ -161,6 +249,26 @@ class SMSService {
         // Remove spaces, dashes, and other non-numeric characters except +
         $cleaned = preg_replace('/[^\d+]/', '', (string) $phoneNumber);
 
+=======
+            
+            // Small delay to avoid overwhelming the gateway
+            usleep(500000); // 0.5 second delay between messages
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Format phone number to +639XXXXXXXXX format
+     * 
+     * @param string $phoneNumber Raw phone number input
+     * @return string|false Formatted number or false if invalid
+     */
+    private function formatPhoneNumber($phoneNumber) {
+        // Remove spaces, dashes, and other non-numeric characters except +
+        $cleaned = preg_replace('/[^\d+]/', '', $phoneNumber);
+        
+>>>>>>> main
         // Handle different input formats
         if (preg_match('/^\+639\d{9}$/', $cleaned)) {
             // Already in correct format: +639XXXXXXXXX
@@ -175,6 +283,7 @@ class SMSService {
             // Format: 9XXXXXXXXX (no prefix)
             return '+63' . $cleaned;
         }
+<<<<<<< HEAD
 
         // Invalid format
         return false;
@@ -183,6 +292,16 @@ class SMSService {
     /**
      * Send class schedule reminder to student
      *
+=======
+        
+        // Invalid format
+        return false;
+    }
+    
+    /**
+     * Send class schedule reminder to student
+     * 
+>>>>>>> main
      * @param string $phoneNumber Student phone number
      * @param string $studentName Student's full name
      * @param string $subjectName Name of the subject
@@ -196,6 +315,7 @@ class SMSService {
         $message .= "Schedule: {$schedule}\n";
         $message .= "Room: {$room}\n";
         $message .= "Instructor: {$instructorName}";
+<<<<<<< HEAD
 
         return $this->sendSMS($phoneNumber, $message);
     }
@@ -203,6 +323,15 @@ class SMSService {
     /**
      * Send grade notification to student
      *
+=======
+        
+        return $this->sendSMS($phoneNumber, $message);
+    }
+    
+    /**
+     * Send grade notification to student
+     * 
+>>>>>>> main
      * @param string $phoneNumber Student phone number
      * @param string $studentName Student's full name
      * @param string $subjectName Name of the subject
@@ -215,14 +344,22 @@ class SMSService {
         $message .= "Grade: {$grade}\n";
         $message .= "Score: {$score}%\n";
         $message .= "Check your portal for details.";
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> main
         return $this->sendSMS($phoneNumber, $message);
     }
 }
 
 /**
  * Get SMS Service instance with configured credentials
+<<<<<<< HEAD
  *
+=======
+ * 
+>>>>>>> main
  * @return SMSService
  */
 function getSMSService() {
@@ -230,6 +367,10 @@ function getSMSService() {
     // OPTION: Override credentials here if you prefer
     // ============================================
     // return new SMSService('your_username', 'your_password');
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> main
     return new SMSService();
 }
